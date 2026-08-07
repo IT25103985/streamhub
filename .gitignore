@@ -1,0 +1,17 @@
+# Java / Spring Boot
+backend/target/
+*.class
+*.jar
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Env / secrets
+.env
+application-local.properties
