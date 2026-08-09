@@ -3,6 +3,10 @@ backend/target/
 *.class
 *.jar
 
+data-sync/.state/
+data-sync/sandaruwan.config
+
+
 # Node / React
 frontend/node_modules/
 frontend/dist/
