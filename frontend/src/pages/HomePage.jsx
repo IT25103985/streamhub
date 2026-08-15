@@ -13,20 +13,12 @@ const HomePage = () => {
   const query = searchParams.get('q') || '';
   const categoryFilter = searchParams.get('category') || 'all';
   const page = parseInt(searchParams.get('page') || '0', 10);
-  
-  const [trendingVideos, setTrendingVideos] = useState([]);
-  const [libraryVideos, setLibraryVideos] = useState([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
+
   const [categories, setCategories] = useState([]);
-
-  // Fetch trending
-  useEffect(() => {
-    axiosInstance.get('/videos/trending')
-      .then(res => setTrendingVideos(res.data))
-      .catch(err => console.error('Error fetching trending', err));
-  }, []);
-
+  const [libraryVideos, setLibraryVideos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  
   // Fetch categories for the homepage blocks and chips
   useEffect(() => {
     axiosInstance.get('/categories')
@@ -39,20 +31,33 @@ const HomePage = () => {
     const fetchLibrary = async () => {
       setLoading(true);
       try {
-        const params = { page, size: PAGE_SIZE };
-        if (query) params.search = query;
-        if (categoryFilter !== 'all') params.category = categoryFilter;
-
-        const res = await axiosInstance.get('/videos', { params });
-        const newVideos = res.data.content || res.data; // Handle Page vs List
-        const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < PAGE_SIZE;
-
-        if (page === 0) {
-          setLibraryVideos(newVideos);
+        if (categoryFilter === 'trending') {
+          const res = await axiosInstance.get('/videos/trending');
+          const newVideos = res.data;
+          
+          if (query) {
+             const lowerQuery = query.toLowerCase();
+             setLibraryVideos(newVideos.filter(v => v.title.toLowerCase().includes(lowerQuery)));
+          } else {
+             setLibraryVideos(newVideos);
+          }
+          setHasMore(false);
         } else {
-          setLibraryVideos(prev => [...prev, ...newVideos]);
+          const params = { page, size: PAGE_SIZE };
+          if (query) params.search = query;
+          if (categoryFilter !== 'all') params.category = categoryFilter;
+
+          const res = await axiosInstance.get('/videos', { params });
+          const newVideos = res.data.content || res.data; // Handle Page vs List
+          const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < PAGE_SIZE;
+
+          if (page === 0) {
+            setLibraryVideos(newVideos);
+          } else {
+            setLibraryVideos(prev => [...prev, ...newVideos]);
+          }
+          setHasMore(!isLast);
         }
-        setHasMore(!isLast);
       } catch (err) {
         console.error('Error fetching library', err);
       } finally {
@@ -71,12 +76,16 @@ const HomePage = () => {
     setSearchParams({ category: categoryFilter, page: (page + 1).toString(), ...(query ? { q: query } : {}) });
   };
 
-  // Mocked home categories if API fails or returns 0
   const displayCategories = categories.length >= 3 ? categories.slice(0, 3) : [
     { id: 1, slug: 'gaming', name: 'Gaming', description: 'Playthroughs, speedruns & ranked grinds', icon: '🎮', bgUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop' },
     { id: 2, slug: 'music', name: 'Music', description: 'Live sets, lo-fi sessions & studio takes', icon: '🎵', bgUrl: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=800&auto=format&fit=crop' },
-    { id: 3, slug: 'movies', name: 'Korean Movies ❤️', description: 'Slow-burn romance & rainy-day dramas', icon: '🎬', bgUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=800&auto=format&fit=crop' }
+    { id: 3, slug: 'movies', name: 'Movies ❤️', description: 'Slow-burn romance & rainy-day dramas', icon: '🎬', bgUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=800&auto=format&fit=crop' }
   ];
+
+  const trendingCat = { id: 'trending', slug: 'trending', name: 'Trending', description: 'What everyone is watching right now', icon: '🔥', bgUrl: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=800&auto=format&fit=crop' };
+  
+  const allCards = [trendingCat, ...displayCategories].slice(0, 4);
+  const allChips = [trendingCat, ...categories];
 
   return (
     <>
@@ -84,8 +93,7 @@ const HomePage = () => {
         <div className="hero-inner">
           <h2>Unlimited entertainment,<br /><em>tuned to your mood.</em></h2>
           <div className="hero-cta">
-            <a href="#trending" className="btn btn-primary">Explore trending</a>
-            <a href="#library" className="btn btn-ghost">Browse full library</a>
+            <a href="#library" className="btn btn-primary">Browse library</a>
           </div>
         </div>
       </section>
@@ -99,7 +107,7 @@ const HomePage = () => {
         </div>
         <div className="block-inner">
           <div className="cards">
-            {displayCategories.map(cat => (
+            {allCards.map(cat => (
               <CategoryCard 
                 key={cat.id} 
                 categoryId={cat.id} 
@@ -114,19 +122,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="block" id="trending">
-        <div className="block-head">
-          <div>
-            <h3>🔥 Trending videos</h3>
-            <p>What everyone on the server is watching right now.</p>
-          </div>
-        </div>
-        <div className="block-inner">
-          <div className="videos-grid featured" id="trending-grid">
-            {trendingVideos.map(v => <VideoCard key={v.id} video={v} featured />)}
-          </div>
-        </div>
-      </section>
+      {/* Trending section removed */}
 
       <section className="block" id="library">
         <div className="block-head">
@@ -138,7 +134,7 @@ const HomePage = () => {
         <div className="block-inner">
           <div className="chip-row">
             <Chip active={categoryFilter === 'all'} onClick={handleFilter} filter="all" label="All" />
-            {categories.map(cat => (
+            {allChips.map(cat => (
                <Chip 
                  key={cat.id} 
                  active={categoryFilter === cat.id.toString()} 
