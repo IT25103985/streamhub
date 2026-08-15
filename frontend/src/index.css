@@ -117,6 +117,20 @@ nav a.active{color:var(--text);background:var(--surface-2)}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 30px -8px rgba(139,92,246,.55)}
 .btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
 .btn-ghost:hover{background:var(--surface-2)}
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: var(--violet-light, #a78bfa);
+}
+.upload-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: var(--violet);
+  color: #fff;
+}
 .nav-toggle{display:none;background:none;border:none;color:var(--text)}
 
 /* ============================================================
@@ -462,6 +476,166 @@ footer{
 }
 .footer-inner .logo{font-size:17px}
 footer p{color:var(--text-faint);font-size:13px}
+
+/* ============================================================
+   Upload Page
+   ============================================================ */
+.upload-page {
+  padding: 80px 20px;
+  min-height: calc(100vh - 76px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.upload-container {
+  width: 100%;
+  max-width: 640px;
+  background: rgba(20, 24, 39, 0.6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+}
+.upload-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.upload-header h2 {
+  font-size: 32px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, var(--violet), var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.upload-header p {
+  color: var(--text-dim);
+  font-size: 15px;
+}
+.upload-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+.form-group {
+  margin-bottom: 24px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  background: rgba(10, 13, 22, 0.7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  transition: all 0.2s var(--ease);
+}
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+.form-group input[type="text"]::placeholder,
+.form-group textarea::placeholder {
+  color: var(--text-faint);
+}
+.file-drop-zone {
+  position: relative;
+  background: rgba(10, 13, 22, 0.7);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 20px;
+  text-align: center;
+  transition: all 0.3s var(--ease);
+  cursor: pointer;
+  overflow: hidden;
+}
+.file-drop-zone:hover {
+  border-color: var(--cyan);
+  background: rgba(45, 212, 191, 0.05);
+}
+.file-drop-zone.has-file {
+  border-style: solid;
+  border-color: var(--violet);
+  background: rgba(139, 92, 246, 0.05);
+}
+.file-drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.drop-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.drop-icon.success {
+  background: rgba(45, 212, 191, 0.1);
+  color: var(--cyan);
+}
+.drop-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.drop-subtitle {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 40px;
+}
+.upload-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ============================================================
    Responsive
