@@ -20,6 +20,16 @@ const CategoryPage = () => {
 
   // Fetch category details
   useEffect(() => {
+    if (categoryId === 'trending') {
+      setCategory({
+         id: 'trending',
+         name: 'Trending',
+         description: 'What everyone on the server is watching right now.',
+         slug: 'trending'
+      });
+      return;
+    }
+
     // Attempt to fetch single category
     axiosInstance.get(`/categories/${categoryId}`)
       .then(res => setCategory(res.data))
@@ -40,19 +50,32 @@ const CategoryPage = () => {
     const fetchLibrary = async () => {
       setLoading(true);
       try {
-        const params = { page, size: PAGE_SIZE, category: categoryId };
-        if (query) params.search = query;
-
-        const res = await axiosInstance.get('/videos', { params });
-        const newVideos = res.data.content || res.data;
-        const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < PAGE_SIZE;
-
-        if (page === 0) {
-          setLibraryVideos(newVideos);
+        if (categoryId === 'trending') {
+          const res = await axiosInstance.get('/videos/trending');
+          const newVideos = res.data;
+          
+          if (query) {
+             const lowerQuery = query.toLowerCase();
+             setLibraryVideos(newVideos.filter(v => v.title.toLowerCase().includes(lowerQuery)));
+          } else {
+             setLibraryVideos(newVideos);
+          }
+          setHasMore(false);
         } else {
-          setLibraryVideos(prev => [...prev, ...newVideos]);
+          const params = { page, size: PAGE_SIZE, category: categoryId };
+          if (query) params.search = query;
+
+          const res = await axiosInstance.get('/videos', { params });
+          const newVideos = res.data.content || res.data;
+          const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < PAGE_SIZE;
+
+          if (page === 0) {
+            setLibraryVideos(newVideos);
+          } else {
+            setLibraryVideos(prev => [...prev, ...newVideos]);
+          }
+          setHasMore(!isLast);
         }
-        setHasMore(!isLast);
       } catch (err) {
         console.error('Error fetching category library', err);
       } finally {
