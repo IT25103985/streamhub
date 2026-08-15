@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 const ICONS = { gaming: "🎮", music: "🎵", movies: "🎬", default: "📺" };
-const LABELS = { gaming: "Gaming", music: "Music", movies: "Korean Movies", default: "Video" };
+const LABELS = { gaming: "Gaming", music: "Music", movies: "Movies", default: "Video" };
 
 const PLAY_SVG = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="white">

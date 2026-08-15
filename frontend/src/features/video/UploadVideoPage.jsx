@@ -57,12 +57,8 @@ const UploadVideoPage = () => {
     formData.append('file', file);
     
     try {
-      // The backend expects a POST to /api/v1/videos with multipart/form-data
-      const response = await axiosInstance.post('/videos', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Axios will automatically set the correct Content-Type with boundary for FormData
+      const response = await axiosInstance.post('/videos', formData);
       
       // Navigate to the video details page (or home if no detail page yet)
       navigate(`/`);

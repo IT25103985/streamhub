@@ -27,7 +27,7 @@ public class Video {
     private String filePath;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "uploader_id", nullable = false)
     private User owner;
 
     @CreationTimestamp

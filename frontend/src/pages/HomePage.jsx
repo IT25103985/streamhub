@@ -75,7 +75,7 @@ const HomePage = () => {
   const displayCategories = categories.length >= 3 ? categories.slice(0, 3) : [
     { id: 1, slug: 'gaming', name: 'Gaming', description: 'Playthroughs, speedruns & ranked grinds', icon: '🎮', bgUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop' },
     { id: 2, slug: 'music', name: 'Music', description: 'Live sets, lo-fi sessions & studio takes', icon: '🎵', bgUrl: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=800&auto=format&fit=crop' },
-    { id: 3, slug: 'movies', name: 'Korean Movies ❤️', description: 'Slow-burn romance & rainy-day dramas', icon: '🎬', bgUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=800&auto=format&fit=crop' }
+    { id: 3, slug: 'movies', name: 'Movies ❤️', description: 'Slow-burn romance & rainy-day dramas', icon: '🎬', bgUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=800&auto=format&fit=crop' }
   ];
 
   return (

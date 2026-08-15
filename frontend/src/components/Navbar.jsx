@@ -88,7 +88,7 @@ const Navbar = () => {
             <button className="btn btn-ghost" onClick={logout}>Logout</button>
           </div>
         ) : (
-          <button className="btn btn-primary" onClick={() => login({ username: 'DemoUser', role: 'ADMIN' })}>Login</button>
+          <button className="btn btn-primary" onClick={() => login('admin', 'AdminPass123!')}>Login (Admin)</button>
         )}
         
         <button className="nav-toggle" aria-label="Toggle menu" onClick={() => setNavOpen(!navOpen)}>
