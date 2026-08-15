@@ -227,3 +227,32 @@ CREATE TABLE SyncLog (
     CONSTRAINT UQ_SyncLog_FileName UNIQUE (file_name)
 );
 GO
+
+-- ---------------------------------------------------------------------
+-- SCHEMA DELTA: AUTH + SECURITY CONFIG
+-- ---------------------------------------------------------------------
+
+-- Add new columns to User table
+-- Note: Providing default values allows this to run on existing local data
+ALTER TABLE [User]
+ADD 
+    first_name      NVARCHAR(50)   NOT NULL DEFAULT 'Unknown',
+    last_name       NVARCHAR(50)   NOT NULL DEFAULT 'Unknown',
+    date_of_birth   DATE           NOT NULL DEFAULT '2000-01-01';
+GO
+
+-- ---------------------------------------------------------------------
+-- REFRESH_TOKEN
+-- ---------------------------------------------------------------------
+CREATE TABLE RefreshToken (
+    id              UNIQUEIDENTIFIER   NOT NULL PRIMARY KEY,
+    user_id         UNIQUEIDENTIFIER   NOT NULL,
+    token_hash      NVARCHAR(255)      NOT NULL,
+    expires_at      DATETIME2          NOT NULL,
+    created_at      DATETIME2          NOT NULL DEFAULT SYSUTCDATETIME(),
+    revoked         BIT                NOT NULL DEFAULT 0,
+    CONSTRAINT FK_RefreshToken_User FOREIGN KEY (user_id) REFERENCES [User](user_id) ON DELETE CASCADE
+);
+GO
+CREATE INDEX IX_RefreshToken_User ON RefreshToken(user_id);
+GO

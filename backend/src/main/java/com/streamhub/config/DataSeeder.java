@@ -27,11 +27,14 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         // Seed Administrator
-        if (!userRepository.existsByUsername("admin")) {
+        if (!userRepository.existsByUsernameIgnoreCase("admin")) {
             User admin = new User(
                     null,
                     "admin",
                     "admin@streamhub.com",
+                    "Admin",
+                    "User",
+                    java.time.LocalDate.of(2000, 1, 1),
                     passwordEncoder.encode(adminPassword),
                     "ADMINISTRATOR",
                     null,
@@ -42,11 +45,14 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         // Seed Content Moderator
-        if (!userRepository.existsByUsername("moderator")) {
+        if (!userRepository.existsByUsernameIgnoreCase("moderator")) {
             User moderator = new User(
                     null,
                     "moderator",
                     "moderator@streamhub.com",
+                    "Moderator",
+                    "User",
+                    java.time.LocalDate.of(2000, 1, 1),
                     passwordEncoder.encode(moderatorPassword),
                     "CONTENT_MODERATOR",
                     null,

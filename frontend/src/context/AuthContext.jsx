@@ -1,48 +1,102 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axiosInstance from '../api/axiosInstance';
+import axiosInstance, { setToken } from '../api/axiosInstance';
 
-// Create Context
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Auth Modal State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' or 'register'
 
-  // Load user from local storage or token if we had a real check
-  // For the frontend foundation demo, we'll start with logged out.
-  // The user can be toggled manually for testing or it will eventually connect to a real login endpoint.
+  const openAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
+
   useEffect(() => {
-    // Example: You could parse window.__streamhub_jwt here if you decode it,
-    // or call an /api/v1/auth/me endpoint.
-    // For now, we leave it null.
+    // Attempt silent refresh on mount
+    const initAuth = async () => {
+      try {
+        const res = await axiosInstance.post('/auth/refresh');
+        setToken(res.data.token);
+        setUser({
+          userId: res.data.userId,
+          username: res.data.username,
+          role: res.data.role
+        });
+      } catch (err) {
+        // Not logged in or token expired
+      } finally {
+        setLoading(false);
+      }
+    };
+    initAuth();
+
+    // Listen for refresh failures from interceptor
+    const handleRefreshFailed = () => setUser(null);
+    window.addEventListener('auth-refresh-failed', handleRefreshFailed);
+    return () => window.removeEventListener('auth-refresh-failed', handleRefreshFailed);
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (email, password, keepMeLoggedIn) => {
     try {
       const response = await axiosInstance.post('/auth/login', {
-        username: username,
-        password: password
+        email,
+        password,
+        keepMeLoggedIn
       });
       const token = response.data.token;
-      window.__streamhub_jwt = token;
+      setToken(token);
       
-      // We assume the response also returns the user details, or we just parse/set hardcoded for now
       setUser({
-        username: response.data.username || username,
-        role: response.data.role || 'ADMINISTRATOR' 
+        userId: response.data.userId,
+        username: response.data.username,
+        role: response.data.role
       });
+      return true;
     } catch (err) {
       console.error("Login failed", err);
-      alert("Login failed! Ensure backend is running and credentials are correct.");
+      throw err;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    window.__streamhub_jwt = null;
+  const register = async (userData) => {
+    try {
+      await axiosInstance.post('/auth/register', userData);
+      return true;
+    } catch (err) {
+      console.error("Registration failed", err);
+      throw err;
+    }
   };
 
+  const logout = async () => {
+    try {
+      await axiosInstance.post('/auth/logout');
+    } catch (err) {
+      console.error("Logout error", err);
+    } finally {
+      setUser(null);
+      setToken(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>; // Could replace with a nice spinner
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, login, logout, register, 
+      isAuthModalOpen, authModalMode, openAuthModal, closeAuthModal, setAuthModalMode 
+    }}>
       {children}
     </AuthContext.Provider>
   );

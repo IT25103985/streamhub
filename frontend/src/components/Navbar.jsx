@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
 const Navbar = () => {
-  const { user, logout, login } = useContext(AuthContext); // login is just for demo if needed
+  const { user, logout } = useContext(AuthContext);
   const [navOpen, setNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -81,14 +81,17 @@ const Navbar = () => {
         
         {user ? (
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-            {user.role === 'ADMIN' && (
+            {user.role === 'ADMINISTRATOR' && (
               <Link to="/admin" className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '13px' }}>Admin</Link>
             )}
             <span style={{ fontSize: '14px', color: 'var(--text-dim)' }}>{user.username}</span>
             <button className="btn btn-ghost" onClick={logout}>Logout</button>
           </div>
         ) : (
-          <button className="btn btn-primary" onClick={() => login('admin', 'AdminPass123!')}>Login (Admin)</button>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+            <Link to="/login" className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '13px' }}>Log In</Link>
+            <Link to="/register" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '13px' }}>Register</Link>
+          </div>
         )}
         
         <button className="nav-toggle" aria-label="Toggle menu" onClick={() => setNavOpen(!navOpen)}>
