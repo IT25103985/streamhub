@@ -56,15 +56,7 @@ public class AuthService {
             throw new IllegalArgumentException("You must be at least 13 years old to register");
         }
 
-        String requestedRole = request.getRole() != null ? request.getRole().toUpperCase() : "VIEWER";
-        
-        if (requestedRole.equals("ADMINISTRATOR") || requestedRole.equals("CONTENT_MODERATOR")) {
-            throw new IllegalArgumentException("Registration with role " + requestedRole + " is not allowed");
-        }
-        
-        if (!requestedRole.equals("VIEWER") && !requestedRole.equals("CONTENT_CREATOR")) {
-            requestedRole = "VIEWER";
-        }
+        String requestedRole = "USER";
 
         User user = new User(
                 null,

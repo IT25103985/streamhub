@@ -1,15 +1,16 @@
 import { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext, useRequireAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
 const Navbar = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, openAuthModal } = useContext(AuthContext);
   const [navOpen, setNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const requireAuth = useRequireAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,12 +73,10 @@ const Navbar = () => {
           <input type="text" placeholder="Search the library…" aria-label="Search videos" onKeyDown={handleSearch} />
         </label>
         
-        {user && (
-          <Link to="/upload" className="btn btn-ghost upload-btn" aria-label="Upload Video">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span className="upload-text">Upload</span>
-          </Link>
-        )}
+        <button onClick={() => requireAuth(() => navigate('/upload'))} className="btn btn-ghost upload-btn" aria-label="Upload Video">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span className="upload-text">Upload</span>
+        </button>
         
         {user ? (
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
@@ -89,8 +88,8 @@ const Navbar = () => {
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-            <Link to="/login" className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '13px' }}>Log In</Link>
-            <Link to="/register" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '13px' }}>Register</Link>
+            <button onClick={() => openAuthModal('login')} className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '13px' }}>Log In</button>
+            <button onClick={() => openAuthModal('register')} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '13px' }}>Register</button>
           </div>
         )}
         

@@ -39,10 +39,6 @@ public class RegisterRequest {
     @NotBlank(message = "Confirm password is required")
     private String confirmPassword;
 
-    @NotBlank(message = "Account type is required")
-    @Pattern(regexp = "^(VIEWER|CONTENT_CREATOR)$", message = "Account type must be either VIEWER or CONTENT_CREATOR")
-    private String role; 
-
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 
@@ -63,7 +59,4 @@ public class RegisterRequest {
 
     public String getConfirmPassword() { return confirmPassword; }
     public void setConfirmPassword(String confirmPassword) { this.confirmPassword = confirmPassword; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
 }

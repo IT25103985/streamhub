@@ -31,7 +31,7 @@ public class VideoController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('CONTENT_CREATOR','ADMINISTRATOR')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<VideoResponseDTO> uploadVideo(
             @RequestParam("title") String title,
             @RequestParam("description") String description,

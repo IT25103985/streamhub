@@ -3,6 +3,11 @@
   --surface:#1B1B22;
   --surface-2:#252530;
   --surface-3:#2f2f3d;
+  --surface-light: #f3f1fa;
+  --surface-light-2: #ffffff;
+  --text-on-light: #1a1a2e;
+  --text-on-light-dim: #6b6b85;
+  --overlay: rgba(10, 13, 22, 0.7);
   --border:rgba(255,255,255,.08);
   --text:#F5F5F7;
   --text-dim:#9aa3c0;
@@ -13,6 +18,7 @@
   --accent-dark:#464ad3;
 
   --violet:#8b5cf6;
+  --violet-soft:#a78bfa;
   --cyan:#2dd4bf;
   --rose:#fb7185;
   --amber:#fbbf24;

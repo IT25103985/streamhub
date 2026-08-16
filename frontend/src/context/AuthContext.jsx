@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import axiosInstance, { setToken } from '../api/axiosInstance';
 
 export const AuthContext = createContext();
@@ -100,4 +100,18 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useRequireAuth = () => {
+  const { user, openAuthModal } = useContext(AuthContext);
+
+  const requireAuth = (actionCallback) => {
+    if (user) {
+      actionCallback();
+    } else {
+      openAuthModal('register');
+    }
+  };
+
+  return requireAuth;
 };

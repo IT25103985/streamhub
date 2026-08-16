@@ -600,6 +600,86 @@ footer p{color:var(--text-faint);font-size:13px}
 }
 
 /* ============================================================
+   Auth Modal
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: var(--surface-light);
+  color: var(--text-on-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 40px 36px;
+  position: relative;
+  animation: modalIn 0.25s var(--ease);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.modal-card::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: var(--text-on-light-dim);
+  cursor: pointer;
+}
+
+.modal-input {
+  width: 100%;
+  background: var(--surface-light-2);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: var(--text-on-light);
+}
+.modal-input:focus {
+  outline: none;
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.modal-submit {
+  width: 100%;
+  background: #5B5FEF;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+/* ============================================================
    Responsive
    ============================================================ */
 @media(max-width:900px){
@@ -631,4 +711,3 @@ footer p{color:var(--text-faint);font-size:13px}
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
 }
-
