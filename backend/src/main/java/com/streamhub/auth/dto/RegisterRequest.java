@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
+//registration payload with validation rules for new accounts
 public class RegisterRequest {
 
     @NotBlank(message = "Username is required")

@@ -15,6 +15,7 @@ import java.time.ZoneOffset;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+//authentication endpoints for register login refresh and logout
 public class AuthController {
 
     private final AuthService authService;
@@ -23,23 +24,25 @@ public class AuthController {
         this.authService = authService;
     }
 
+    //auth registration endpoint block
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 
+    //auth login endpoint block
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthService.LoginResult result = authService.login(request);
         
         long maxAge = result.isPersistent 
                 ? result.expiresAt.toEpochSecond(ZoneOffset.UTC) - LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
-                : -1; // -1 means session cookie
+                : -1; //negative value creates a session cookie
 
         String safeToken = result.plainRefreshToken != null ? result.plainRefreshToken : "";
         ResponseCookie cookie = ResponseCookie.from("refresh_token", safeToken)
                 .httpOnly(true)
-                .secure(true) // Should ideally only be true on HTTPS, but assuming it based on requirements
+                .secure(true) //mark cookie as secure
                 .sameSite("Strict")
                 .path("/")
                 .maxAge(maxAge)
@@ -50,6 +53,7 @@ public class AuthController {
                 .body(result.authResponse);
     }
 
+    //auth token refresh endpoint block
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@CookieValue(name = "refresh_token", required = false) String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
@@ -59,13 +63,14 @@ public class AuthController {
         try {
             AuthService.LoginResult result = authService.refresh(refreshToken);
             
-            // Optionally update the cookie if you implement token rotation. We just keep the existing one.
+            //keep existing cookie when refreshing access token
             return ResponseEntity.ok(result.authResponse);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).build();
         }
     }
 
+    //auth logout endpoint block
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@CookieValue(name = "refresh_token", required = false) String refreshToken) {
         if (refreshToken != null) {
@@ -77,7 +82,7 @@ public class AuthController {
                 .secure(true)
                 .sameSite("Strict")
                 .path("/")
-                .maxAge(0) // Clear cookie
+                .maxAge(0) //expire cookie immediately
                 .build();
 
         return ResponseEntity.ok()

@@ -1,0 +1,14 @@
+.inline-spinner {
+  display: inline-block;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 50%;
+  animation: inline-spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes inline-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

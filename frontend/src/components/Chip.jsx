@@ -1,3 +1,4 @@
+//interactive pill chip button for selection filters
 const Chip = ({ filter, active, onClick, label, count }) => {
   return (
     <button 

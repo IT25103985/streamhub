@@ -23,6 +23,7 @@ import java.util.Base64;
 
 
 @Service
+//handles user registration password hashing and secure token issuance
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -39,6 +40,7 @@ public class AuthService {
     }
 
     @Transactional
+    //user registration validation logic
     public AuthResponse register(RegisterRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("Passwords do not match");
@@ -67,28 +69,37 @@ public class AuthService {
                 request.getDateOfBirth(),
                 passwordEncoder.encode(request.getPassword()),
                 requestedRole,
+                "ACTIVE",
                 null,
                 null
         );
 
         user = userRepository.save(user);
 
-        // Don't auto-login on register for now, return simple auth response
+        //dont issue token immediately upon register
         return new AuthResponse(
-                null, // No token on register
+                null, //no token on register
                 user.getUserId(),
                 user.getUsername(),
-                user.getRole()
+                user.getEmail(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                isNeedsOnboarding(user)
         );
     }
 
     @Transactional
+    //user credential verification and token creation logic
     public LoginResult login(LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        if ("BANNED".equals(user.getStatus()) || "DEACTIVATED".equals(user.getStatus())) {
+            throw new IllegalArgumentException("Your account has been " + user.getStatus().toLowerCase());
         }
 
         String accessToken = jwtUtil.generateToken(user);
@@ -100,7 +111,7 @@ public class AuthService {
         if (request.isKeepMeLoggedIn()) {
             expiresAt = LocalDateTime.now().plusDays(30);
         } else {
-            expiresAt = LocalDateTime.now().plusHours(24); // Server backstop
+            expiresAt = LocalDateTime.now().plusHours(24); //default 24h expiration
         }
 
         RefreshToken refreshToken = new RefreshToken(user, hashedToken, expiresAt);
@@ -110,13 +121,17 @@ public class AuthService {
                 accessToken,
                 user.getUserId(),
                 user.getUsername(),
-                user.getRole()
+                user.getEmail(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                isNeedsOnboarding(user)
         );
 
         return new LoginResult(authResponse, plainRefreshToken, expiresAt, request.isKeepMeLoggedIn());
     }
 
     @Transactional
+    //silent token renewal logic
     public LoginResult refresh(String plainRefreshToken) {
         String hashedToken = hashToken(plainRefreshToken);
         
@@ -130,20 +145,35 @@ public class AuthService {
         User user = refreshToken.getUser();
         String newAccessToken = jwtUtil.generateToken(user);
 
-        // Optionally, do rotation: revoke current and issue a new one. 
-        // For now we just return a new access token and keep the old refresh token valid.
+        //issue new access token while keeping refresh token
         
         AuthResponse authResponse = new AuthResponse(
                 newAccessToken,
                 user.getUserId(),
                 user.getUsername(),
-                user.getRole()
+                user.getEmail(),
+                user.getRole(),
+                user.getAvatarUrl(),
+                isNeedsOnboarding(user)
         );
 
         return new LoginResult(authResponse, plainRefreshToken, refreshToken.getExpiresAt(), true);
     }
 
+    //determines if onboarding is required only for standard users
+    private boolean isNeedsOnboarding(User user) {
+        if (user == null) {
+            return false;
+        }
+        String role = user.getRole();
+        if (role != null && (!"USER".equalsIgnoreCase(role) || "ADMINISTRATOR".equalsIgnoreCase(role) || "CONTENT_MODERATOR".equalsIgnoreCase(role) || "ADMIN".equalsIgnoreCase(role) || "MODERATOR".equalsIgnoreCase(role))) {
+            return false;
+        }
+        return !user.isHasSetInterests();
+    }
+
     @Transactional
+    //session revocation and logout logic
     public void logout(String plainRefreshToken) {
         if (plainRefreshToken == null || plainRefreshToken.isBlank()) return;
         String hashedToken = hashToken(plainRefreshToken);

@@ -1,0 +1,44 @@
+/* tab navigation bar styling for search results */
+.search-tabs-container {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: var(--spacing-md, 16px);
+    margin-bottom: var(--spacing-lg, 20px);
+}
+
+.search-tabs-list {
+    display: flex;
+    gap: var(--spacing-lg, 20px);
+}
+
+.search-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary, #aaa);
+    font-size: var(--font-size-md, 16px);
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 12px 12px 12px;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.search-tab-btn:hover {
+    color: var(--text-primary, #fff);
+}
+
+.search-tab-btn.active {
+    color: var(--text-primary, #fff);
+    font-weight: 600;
+}
+
+.search-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color, #3b82f6);
+}

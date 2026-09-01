@@ -20,6 +20,7 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+//spring security configuration defining route access rules and stateless session
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
@@ -42,9 +43,16 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout", "/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/videos/**", "/api/v1/video").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/videos/*/view").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/videos/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
-                .requestMatchers("/api/moderate/**").hasAnyRole("ADMINISTRATOR", "CONTENT_MODERATOR")
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/**", "/api/playlists/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/comments", "/api/v1/likes/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/avatar/**", "/api/v1/users/cover/**", "/api/v1/users/*/profile").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/watch-history/trending", "/api/watch-history/trending").permitAll()
+                .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasRole("ADMINISTRATOR")
+                .requestMatchers("/api/v1/moderate/**", "/api/moderate/**").hasAnyRole("ADMINISTRATOR", "CONTENT_MODERATOR")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -57,8 +65,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "x-auth-token"));
-        configuration.setExposedHeaders(Arrays.asList("x-auth-token"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "x-auth-token", "Range"));
+        configuration.setExposedHeaders(Arrays.asList("x-auth-token", "Accept-Ranges", "Content-Range", "Content-Length", "Content-Type"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

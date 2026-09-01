@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 
+//login credentials payload with optional keep me logged in flag
 public class LoginRequest {
 
     @NotBlank(message = "Email is required")

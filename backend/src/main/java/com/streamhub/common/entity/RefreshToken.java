@@ -7,7 +7,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "RefreshToken")
+@Table(name = "refresh_token")
+//database entity storing hashed refresh tokens and expiry dates
 public class RefreshToken {
 
     @Id

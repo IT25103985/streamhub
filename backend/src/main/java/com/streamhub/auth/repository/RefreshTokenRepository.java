@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+//data access repository for hashed refresh tokens
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 }

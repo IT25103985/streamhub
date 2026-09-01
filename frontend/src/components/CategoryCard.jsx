@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+//category card tile with gradient accents for browse page
 const CategoryCard = ({ categoryId, slug, title, description, icon, bgUrl }) => {
   return (
     <Link 

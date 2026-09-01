@@ -1,7 +1,10 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
+//modal dialog handling user sign in and registration forms
 const AuthModal = () => {
+  const navigate = useNavigate();
   const { isAuthModalOpen, authModalMode, closeAuthModal, setAuthModalMode, login, register } = useContext(AuthContext);
   const modalRef = useRef(null);
 
@@ -43,9 +46,7 @@ const AuthModal = () => {
     if (!isAuthModalOpen) return;
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        closeAuthModal();
-      } else if (e.key === 'Tab') {
+      if (e.key === 'Tab') {
         if (!modalRef.current) return;
         const focusableElements = modalRef.current.querySelectorAll(
           'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
@@ -71,15 +72,16 @@ const AuthModal = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     
-    // Auto focus the modal to trap keyboard
+    //focus modal container on open
     setTimeout(() => {
       if (modalRef.current) {
         modalRef.current.focus();
       }
     }, 100);
 
+    //auth modal form section
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthModalOpen, closeAuthModal]);
+  }, [isAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
@@ -103,7 +105,7 @@ const AuthModal = () => {
   };
 
   const parseServerErrors = (err) => {
-    const msg = err.response?.data?.message || '';
+    const msg = err.response?.data?.message || err.response?.data?.error || '';
     const msgLower = msg.toLowerCase();
     let newFieldErrors = {};
     let isFieldError = false;
@@ -135,15 +137,26 @@ const AuthModal = () => {
     if (isFieldError) {
       setFieldErrors(newFieldErrors);
     } else {
-      setGlobalError(msg || 'An unexpected error occurred. Please try again.');
+      let finalMsg = msg;
+      if (!finalMsg && err.response) {
+        //fallback to raw data if message key is missing
+        const rawData = typeof err.response.data === 'string' ? err.response.data.substring(0, 100) : JSON.stringify(err.response.data);
+        finalMsg = `Server Error (${err.response.status}): ${rawData}`;
+      } else if (!finalMsg && !err.response) {
+        finalMsg = err.message === 'Network Error' ? 'Network Error: Could not connect to the server.' : err.message;
+      }
+      setGlobalError(finalMsg || 'An unexpected error occurred. Please try again.');
     }
   };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     try {
-      await login(loginData.email, loginData.password, loginData.keepMeLoggedIn);
+      const userData = await login(loginData.email, loginData.password, loginData.keepMeLoggedIn);
       closeAuthModal();
+      if (userData && (userData.role === 'ADMINISTRATOR' || userData.role === 'CONTENT_MODERATOR')) {
+        navigate('/admin');
+      }
     } catch (err) {
       parseServerErrors(err);
       if (err.response?.status === 401) {
@@ -177,14 +190,8 @@ const AuthModal = () => {
     setAuthModalMode(mode);
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      closeAuthModal();
-    }
-  };
-
   return (
-    <div className="modal-overlay" onClick={handleBackdropClick}>
+    <div className="modal-overlay">
       <div 
         className="modal-card" 
         ref={modalRef} 
@@ -192,8 +199,17 @@ const AuthModal = () => {
         role="dialog"
         aria-modal="true"
       >
-        <button className="modal-close" onClick={closeAuthModal} aria-label="Close">
-          ✕
+        <button 
+          type="button"
+          className="modal-close" 
+          onClick={closeAuthModal} 
+          aria-label="Close"
+          title="Close"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
@@ -201,7 +217,7 @@ const AuthModal = () => {
             {authModalMode === 'login' ? 'Welcome back' : 'Create An Account'}
           </h2>
           <p style={{ color: 'var(--text-on-light-dim)', fontSize: '14px', margin: 0 }}>
-            {authModalMode === 'login' ? 'Sign in to access your library' : 'Join StreamHub today'}
+            {authModalMode === 'login' ? 'Sign in to access your library' : <>Join Stream<span style={{ color: '#e50914' }}>Hub</span> today</>}
           </p>
         </div>
 
@@ -277,11 +293,11 @@ const AuthModal = () => {
               {fieldErrors.password && <div style={{ color: '#dc2626', fontSize: '12px', marginBottom: '10px' }}>{fieldErrors.password}</div>}
               
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '11px', fontWeight: '500', marginBottom: '14px', color: 'var(--text-on-light-dim)' }}>
-                <span style={{ color: passwordRules.length ? '#16a34a' : 'inherit' }}>{passwordRules.length ? '✓ ' : '○ '}8+ chars</span>
-                <span style={{ color: passwordRules.uppercase ? '#16a34a' : 'inherit' }}>{passwordRules.uppercase ? '✓ ' : '○ '}Uppercase</span>
-                <span style={{ color: passwordRules.lowercase ? '#16a34a' : 'inherit' }}>{passwordRules.lowercase ? '✓ ' : '○ '}Lowercase</span>
-                <span style={{ color: passwordRules.number ? '#16a34a' : 'inherit' }}>{passwordRules.number ? '✓ ' : '○ '}Number</span>
-                <span style={{ color: passwordRules.special ? '#16a34a' : 'inherit' }}>{passwordRules.special ? '✓ ' : '○ '}Special char</span>
+                <span style={{ color: passwordRules.length ? '#16a34a' : 'inherit' }}>{passwordRules.length ? '[x] ' : '[ ] '}8+ chars</span>
+                <span style={{ color: passwordRules.uppercase ? '#16a34a' : 'inherit' }}>{passwordRules.uppercase ? '[x] ' : '[ ] '}Uppercase</span>
+                <span style={{ color: passwordRules.lowercase ? '#16a34a' : 'inherit' }}>{passwordRules.lowercase ? '[x] ' : '[ ] '}Lowercase</span>
+                <span style={{ color: passwordRules.number ? '#16a34a' : 'inherit' }}>{passwordRules.number ? '[x] ' : '[ ] '}Number</span>
+                <span style={{ color: passwordRules.special ? '#16a34a' : 'inherit' }}>{passwordRules.special ? '[x] ' : '[ ] '}Special char</span>
               </div>
             </div>
 
