@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+//page footer with platform branding and navigation links
 const Footer = () => {
   return (
     <footer>

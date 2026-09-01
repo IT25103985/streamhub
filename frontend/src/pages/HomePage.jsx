@@ -1,176 +1,281 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
+import { AuthContext } from '../context/AuthContext';
+import watchHistoryService from '../features/watchhistory/watchHistoryService';
+import { playlistService } from '../features/playlist/playlistService';
 import VideoCard from '../components/VideoCard';
-import CategoryCard from '../components/CategoryCard';
-import Chip from '../components/Chip';
+import PlaylistCard from '../features/playlist/PlaylistCard';
+import VideoGridSkeleton from '../components/skeletons/VideoGridSkeleton';
+import VideoCardSkeleton from '../components/skeletons/VideoCardSkeleton';
+import PlaylistCardSkeleton from '../components/skeletons/PlaylistCardSkeleton';
+import CategoryChipBar from '../components/CategoryChipBar';
+import SearchResultsTabs from '../features/search/SearchResultsTabs';
+import VideoWatchPanel from '../features/video/VideoWatchPanel';
+import TrendingSection from '../features/video/TrendingSection';
+import RecommendedSection from '../features/video/RecommendedSection';
+import HomeSidebar from '../components/HomeSidebar';
+import './HomePage.css';
+import '../features/search/SearchResults.css';
 
 const PAGE_SIZE = 8;
 
+//main landing feed combining hero banner trending recommendations and tabbed library grid
 const HomePage = () => {
+  const { user } = useContext(AuthContext);
   const [searchParams, setSearchParams] = useSearchParams();
   
   const query = searchParams.get('q') || '';
-  const categoryFilter = searchParams.get('category') || 'all';
+  const categoryId = searchParams.get('categoryId');
+  const activeTab = searchParams.get('tab') || 'videos';
   const page = parseInt(searchParams.get('page') || '0', 10);
 
-  const [categories, setCategories] = useState([]);
+  const [activeVideoId, setActiveVideoId] = useState(null);
+
+  const [recommendedVideos, setRecommendedVideos] = useState([]);
   const [libraryVideos, setLibraryVideos] = useState([]);
+  const [libraryPlaylists, setLibraryPlaylists] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   
-  // Fetch categories for the homepage blocks and chips
+  const fetchRecs = async () => {
+    //only fetch recommendations for authenticated users
+    if (!user) {
+      setRecommendedVideos([]);
+      return;
+    }
+    try {
+      const recs = await watchHistoryService.getRecommendations(4);
+      setRecommendedVideos(recs || []);
+    } catch (err) {
+      console.error('Error fetching recommendations', err);
+      setRecommendedVideos([]);
+    }
+  };
+
+  const fetchLibrary = async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    try {
+      const currentPage = isRefresh ? 0 : page;
+      const params = { page: 0, size: PAGE_SIZE * (currentPage + 1) };
+      if (query) params.search = query;
+      if (categoryId) params.categoryId = categoryId;
+
+      const res = await axiosInstance.get('/videos', { params });
+      const newVideos = res.data.content || res.data || [];
+      const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < (PAGE_SIZE * (currentPage + 1));
+
+      setLibraryVideos(newVideos);
+      setHasMore(!isLast);
+    } catch (err) {
+      console.error('Error fetching library', err);
+      setLibraryVideos([]);
+      setHasMore(false);
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
+  };
+
+  const fetchPlaylists = async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    try {
+      const currentPage = isRefresh ? 0 : page;
+      const params = { page: 0, size: PAGE_SIZE * (currentPage + 1) };
+      if (query) params.query = query;
+      if (categoryId) params.categoryId = categoryId;
+
+      const res = await playlistService.searchPlaylists(params);
+      const newPlaylists = res.content || res || [];
+      const isLast = res.last !== undefined ? res.last : newPlaylists.length < (PAGE_SIZE * (currentPage + 1));
+
+      setLibraryPlaylists(newPlaylists);
+      setHasMore(!isLast);
+    } catch (err) {
+      console.error('Error fetching library playlists', err);
+      setLibraryPlaylists([]);
+      setHasMore(false);
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
+  };
+
+  //refetch feed whenever search category or tab filter updates
   useEffect(() => {
-    axiosInstance.get('/categories')
-      .then(res => setCategories(res.data))
-      .catch(err => console.error('Error fetching categories', err));
-  }, []);
+    fetchRecs();
+    if (activeTab === 'playlists') {
+      fetchPlaylists();
+    } else {
+      fetchLibrary();
+    }
+  }, [query, categoryId, activeTab, page, user]);
 
-  // Fetch library grid
+  //listen for cross tab updates from new uploads
   useEffect(() => {
-    const fetchLibrary = async () => {
-      setLoading(true);
-      try {
-        if (categoryFilter === 'trending') {
-          const res = await axiosInstance.get('/videos/trending');
-          const newVideos = res.data;
-          
-          if (query) {
-             const lowerQuery = query.toLowerCase();
-             setLibraryVideos(newVideos.filter(v => v.title.toLowerCase().includes(lowerQuery)));
-          } else {
-             setLibraryVideos(newVideos);
-          }
-          setHasMore(false);
-        } else {
-          const params = { page, size: PAGE_SIZE };
-          if (query) params.search = query;
-          if (categoryFilter !== 'all') params.category = categoryFilter;
-
-          const res = await axiosInstance.get('/videos', { params });
-          const newVideos = res.data.content || res.data; // Handle Page vs List
-          const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < PAGE_SIZE;
-
-          if (page === 0) {
-            setLibraryVideos(newVideos);
-          } else {
-            setLibraryVideos(prev => [...prev, ...newVideos]);
-          }
-          setHasMore(!isLast);
-        }
-      } catch (err) {
-        console.error('Error fetching library', err);
-      } finally {
-        setLoading(false);
+    const handleRealtimeUpdate = () => {
+      fetchRecs();
+      if (activeTab === 'playlists') {
+        fetchPlaylists(true);
+      } else {
+        fetchLibrary(true);
       }
     };
 
-    fetchLibrary();
-  }, [query, categoryFilter, page]);
+    window.addEventListener('streamhub-video-update', handleRealtimeUpdate);
+    window.addEventListener('focus', handleRealtimeUpdate);
 
-  const handleFilter = (cat) => {
-    setSearchParams({ category: cat, page: '0', ...(query ? { q: query } : {}) });
+    //periodic background refresh for view count badges
+    const interval = setInterval(handleRealtimeUpdate, 30000);
+
+    //cleanup realtime update event listeners
+    return () => {
+      window.removeEventListener('streamhub-video-update', handleRealtimeUpdate);
+      window.removeEventListener('focus', handleRealtimeUpdate);
+      clearInterval(interval);
+    };
+  }, [query, categoryId, activeTab, page, user]);
+
+  const handleCategoryChange = (catId) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (catId) {
+      newParams.set('categoryId', catId);
+    } else {
+      newParams.delete('categoryId');
+    }
+    newParams.set('page', '0');
+    setSearchParams(newParams);
+  };
+
+  const handleTabChange = (newTab) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', newTab);
+    newParams.set('page', '0');
+    setSearchParams(newParams);
   };
 
   const handleLoadMore = () => {
-    setSearchParams({ category: categoryFilter, page: (page + 1).toString(), ...(query ? { q: query } : {}) });
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('page', (page + 1).toString());
+    setSearchParams(newParams);
   };
 
-  const displayCategories = categories.length >= 3 ? categories.slice(0, 3) : [
-    { id: 1, slug: 'gaming', name: 'Gaming', description: 'Playthroughs, speedruns & ranked grinds', icon: '🎮', bgUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop' },
-    { id: 2, slug: 'music', name: 'Music', description: 'Live sets, lo-fi sessions & studio takes', icon: '🎵', bgUrl: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?q=80&w=800&auto=format&fit=crop' },
-    { id: 3, slug: 'movies', name: 'Movies ❤️', description: 'Slow-burn romance & rainy-day dramas', icon: '🎬', bgUrl: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=800&auto=format&fit=crop' }
-  ];
-
-  const trendingCat = { id: 'trending', slug: 'trending', name: 'Trending', description: 'What everyone is watching right now', icon: '🔥', bgUrl: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=800&auto=format&fit=crop' };
-  
-  const allCards = [trendingCat, ...displayCategories].slice(0, 4);
-  const allChips = [trendingCat, ...categories];
-
   return (
-    <>
-      <section className="hero">
-        <div className="hero-inner">
-          <h2>Unlimited entertainment,<br /><em>tuned to your mood.</em></h2>
-          <div className="hero-cta">
-            <a href="#library" className="btn btn-primary">Browse library</a>
-          </div>
-        </div>
-      </section>
+    <div className="home-layout-container">
+      
+      <HomeSidebar 
+        recommendedVideos={recommendedVideos}
+        onSelectVideo={(id) => setActiveVideoId(id)}
+      />
 
-      <section className="block">
-        <div className="block-head">
-          <div>
-            <h3>Browse by category</h3>
-            <p>Pick a lane, or scroll down for everything at once.</p>
+      <main className="home-main-feed">
+        
+        <section className="hero">
+          <div className="hero-inner">
+            <h2>Pure entertainment<br /><em>at your fingertips.</em></h2>
           </div>
-        </div>
-        <div className="block-inner">
-          <div className="cards">
-            {allCards.map(cat => (
-              <CategoryCard 
-                key={cat.id} 
-                categoryId={cat.id} 
-                slug={cat.slug || cat.name.toLowerCase()} 
-                title={cat.name} 
-                description={cat.description || 'Explore this category'}
-                icon={cat.icon || '📺'}
-                bgUrl={cat.bgUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop'} 
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Trending section removed */}
+        {!query && !categoryId && activeTab === 'videos' && page === 0 && (
+          <>
+            <TrendingSection onSelectVideo={(id) => setActiveVideoId(id)} />
+            {user && <RecommendedSection onSelectVideo={(id) => setActiveVideoId(id)} />}
+          </>
+        )}
 
-      <section className="block" id="library">
-        <div className="block-head">
-          <div>
-            <h3>Full library</h3>
-            <p><span id="library-count">{libraryVideos.length} videos</span> currently on the server — filter by category or search by title.</p>
+        <section className="block" id="library" style={{ paddingTop: 0 }}>
+          <div className="block-head" style={{ marginBottom: '14px' }}>
+            <div>
+              <h3>{query ? `Search results for "${query}"` : 'Browse by category'}</h3>
+            </div>
           </div>
-        </div>
-        <div className="block-inner">
-          <div className="chip-row">
-            <Chip active={categoryFilter === 'all'} onClick={handleFilter} filter="all" label="All" />
-            {allChips.map(cat => (
-               <Chip 
-                 key={cat.id} 
-                 active={categoryFilter === cat.id.toString()} 
-                 onClick={handleFilter} 
-                 filter={cat.id.toString()} 
-                 label={`${cat.icon || ''} ${cat.name}`.trim()} 
-               />
-            ))}
-            {/* Fallbacks if no categories fetched yet */}
-            {categories.length === 0 && (
-              <>
-                <Chip active={categoryFilter === '1'} onClick={handleFilter} filter="1" label="🎮 Gaming" />
-                <Chip active={categoryFilter === '2'} onClick={handleFilter} filter="2" label="🎵 Music" />
-                <Chip active={categoryFilter === '3'} onClick={handleFilter} filter="3" label="🎬 Movies" />
-              </>
-            )}
-          </div>
-          <div className="videos-grid" id="library-grid">
-            {libraryVideos.length ? (
-              libraryVideos.map(v => <VideoCard key={v.id} video={v} />)
-            ) : (
-              !loading && <div className="empty-state"><span>🛰️</span>Nothing matches that search yet.</div>
-            )}
-          </div>
-          <div className="load-more-row">
-            <button className="btn-load" id="load-more-btn" onClick={handleLoadMore} disabled={!hasMore || loading}>
-              {hasMore ? (
-                <>Load more videos <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg></>
+
+          <CategoryChipBar 
+            selectedCategoryId={categoryId} 
+            onCategoryChange={handleCategoryChange} 
+          />
+
+          <SearchResultsTabs 
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+
+          <div className="block-inner">
+            {activeTab === 'videos' ? (
+              loading && libraryVideos.length === 0 ? (
+                <VideoGridSkeleton count={8} id="library-grid" />
               ) : (
-                "You've reached the end of the library"
-              )}
-            </button>
+                <div className="videos-grid home-4col-grid" id="library-grid">
+                  {libraryVideos.length ? (
+                    libraryVideos.map(v => (
+                      <VideoCard 
+                        key={v.videoId || v.id} 
+                        video={v} 
+                        onClick={() => setActiveVideoId(v.videoId || v.id)} 
+                      />
+                    ))
+                  ) : (
+                    !loading && <div className="empty-state">No videos found</div>
+                  )}
+                  {loading && libraryVideos.length > 0 && (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <VideoCardSkeleton key={`video-more-skel-${i}`} />
+                    ))
+                  )}
+                </div>
+              )
+            ) : (
+              loading && libraryPlaylists.length === 0 ? (
+                <div className="videos-grid home-4col-grid" id="library-playlists-grid">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <PlaylistCardSkeleton key={`playlist-skel-${i}`} />
+                  ))}
+                </div>
+              ) : (
+                <div className="videos-grid home-4col-grid" id="library-playlists-grid">
+                  {libraryPlaylists.length ? (
+                    libraryPlaylists.map(p => (
+                      <PlaylistCard 
+                        key={p.playlistId} 
+                        playlist={p} 
+                        isOwner={false}
+                      />
+                    ))
+                  ) : (
+                    !loading && <div className="empty-state">No playlists found</div>
+                  )}
+                  {loading && libraryPlaylists.length > 0 && (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <PlaylistCardSkeleton key={`playlist-more-skel-${i}`} />
+                    ))
+                  )}
+                </div>
+              )
+            )}
+
+            <div className="load-more-row">
+              <button 
+                className="btn-load" 
+                id="load-more-btn" 
+                onClick={handleLoadMore} 
+                disabled={!hasMore || loading}
+              >
+                {hasMore ? (
+                  <>Load more {activeTab === 'videos' ? 'videos' : 'playlists'} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg></>
+                ) : (
+                  `You've reached the end of the ${activeTab === 'videos' ? 'videos' : 'playlists'}`
+                )}
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
-    </>
+        </section>
+      </main>
+
+      {activeVideoId && (
+        <VideoWatchPanel 
+          videoId={activeVideoId} 
+          onClose={() => setActiveVideoId(null)} 
+        />
+      )}
+    </div>
   );
 };
 

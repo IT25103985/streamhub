@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.Collections;
 
 @Component
+//spring security filter validating bearer tokens on incoming requests
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -34,9 +35,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 String username = jwtUtil.getUsernameFromToken(jwt);
                 String role = jwtUtil.getRoleFromToken(jwt);
 
-                // Add "ROLE_" prefix if required by Spring Security configuration later, 
-                // but usually better to keep raw or add it based on convention.
-                // We'll use "ROLE_" + role.
+                //prefix role with role underscore for spring security authorities
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -50,7 +49,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            // Cannot set user authentication in security context
+            //skip setting auth context when token is invalid
         }
 
         filterChain.doFilter(request, response);

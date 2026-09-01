@@ -1,40 +1,43 @@
 import { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext, useRequireAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axiosInstance';
-
+import ProfileDropdown from './ProfileDropdown';
+import NotificationBell from '../features/notification/NotificationBell';
+//primary top header with search bar notifications and user menu
 const Navbar = () => {
-  const { user, logout, login } = useContext(AuthContext); // login is just for demo if needed
+  const { user, logout, openAuthModal } = useContext(AuthContext);
   const [navOpen, setNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const requireAuth = useRequireAuth();
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 8);
     };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    //navbar header and search section
+  return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
-    // Fetch categories for the navbar
+    //load navbar categories
     axiosInstance.get('/categories')
       .then(res => {
-        // Assume backend returns array of objects with id, name, slug or similar
-        // Adjust based on actual DTO
-        setCategories(res.data.slice(0, 4)); // max 4 for header
+                setCategories(res.data.slice(0, 4)); //limit to top four categories
       })
       .catch(err => console.error("Error fetching categories for navbar", err));
   }, []);
 
+  //handles global search navigation on enter key
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
       const q = e.target.value.trim();
       if (q) {
-        navigate(`/?q=${encodeURIComponent(q)}`);
+        navigate(`/search?q=${encodeURIComponent(q)}`);
       } else {
         navigate(`/`);
       }
@@ -44,56 +47,29 @@ const Navbar = () => {
   return (
     <header style={{ background: scrolled ? 'rgba(10,13,22,.92)' : 'rgba(10,13,22,.72)' }}>
       <Link to="/" className="logo">Stream<span>Hub</span></Link>
-      <nav className={navOpen ? 'open' : ''}>
-        <Link to="/" className={location.pathname === '/' ? 'active' : ''} onClick={() => setNavOpen(false)}>Home</Link>
-        {categories.length > 0 ? (
-           categories.map(cat => (
-             <Link 
-               key={cat.id} 
-               to={`/categories/${cat.id}`} 
-               className={location.pathname === `/categories/${cat.id}` ? 'active' : ''} 
-               onClick={() => setNavOpen(false)}
-             >
-               {cat.name}
-             </Link>
-           ))
-        ) : (
-          <>
-            {/* Fallback until API is ready */}
-            <Link to="/categories/1" className={location.pathname === '/categories/1' ? 'active' : ''} onClick={() => setNavOpen(false)}>Gaming</Link>
-            <Link to="/categories/2" className={location.pathname === '/categories/2' ? 'active' : ''} onClick={() => setNavOpen(false)}>Music</Link>
-            <Link to="/categories/3" className={location.pathname === '/categories/3' ? 'active' : ''} onClick={() => setNavOpen(false)}>Movies</Link>
-          </>
-        )}
-      </nav>
-      <div className="header-actions">
+      <div className="header-search">
         <label className="search-pill">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" placeholder="Search the library…" aria-label="Search videos" onKeyDown={handleSearch} />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search…" aria-label="Search videos" onKeyDown={handleSearch} />
         </label>
+      </div>
+      <div className="header-actions">
         
-        {user && (
-          <Link to="/upload" className="btn btn-ghost upload-btn" aria-label="Upload Video">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            <span className="upload-text">Upload</span>
-          </Link>
-        )}
+        <button onClick={() => requireAuth(() => navigate('/upload'))} className="btn btn-ghost upload-btn" aria-label="Upload Video">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span className="upload-text">Upload</span>
+        </button>
         
         {user ? (
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-            {user.role === 'ADMIN' && (
-              <Link to="/admin" className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '13px' }}>Admin</Link>
-            )}
-            <span style={{ fontSize: '14px', color: 'var(--text-dim)' }}>{user.username}</span>
-            <button className="btn btn-ghost" onClick={logout}>Logout</button>
+            <NotificationBell />
+            <ProfileDropdown />
           </div>
         ) : (
-          <button className="btn btn-primary" onClick={() => login('admin', 'AdminPass123!')}>Login (Admin)</button>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+            <button onClick={() => openAuthModal('login')} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '13px' }}>Log In</button>
+          </div>
         )}
-        
-        <button className="nav-toggle" aria-label="Toggle menu" onClick={() => setNavOpen(!navOpen)}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-        </button>
       </div>
     </header>
   );

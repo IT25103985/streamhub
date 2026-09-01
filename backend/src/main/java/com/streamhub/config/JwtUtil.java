@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
+//utility helper for generating and validating json web tokens
 public class JwtUtil {
 
     @Value("${jwt.secret}")
@@ -24,6 +25,7 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    //generates signed jwt token containing user id and role
     public String generateToken(User user) {
         return Jwts.builder()
                 .subject(user.getUsername())
@@ -43,6 +45,7 @@ public class JwtUtil {
         return getClaims(token).get("role", String.class);
     }
 
+    //checks if token signature is valid and not expired
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);

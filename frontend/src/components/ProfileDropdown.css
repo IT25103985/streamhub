@@ -1,0 +1,133 @@
+.profile-dropdown-container {
+  position: relative;
+}
+
+.profile-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.2s var(--ease);
+}
+
+.profile-btn:hover {
+  background: var(--surface-3);
+}
+
+.profile-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  width: 240px;
+  z-index: 100;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-menu-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-menu-name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.profile-menu-email {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  word-break: break-all;
+  text-transform: none;
+  line-height: 1.35;
+}
+
+.profile-menu-section {
+  padding: 8px 0;
+}
+
+.profile-menu-divider {
+  border-top: 1px solid var(--border);
+  padding: 8px 0;
+}
+
+.dropdown-item {
+  padding: 10px 16px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+  display: block;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background 0.2s var(--ease);
+}
+
+.dropdown-item:hover {
+  background: var(--surface-2);
+}
+
+.theme-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.theme-toggle-btn {
+  border: none;
+  border-radius: 20px;
+  width: 36px;
+  height: 20px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s var(--ease);
+}
+
+.theme-toggle-btn.dark {
+  background: var(--accent);
+}
+
+.theme-toggle-btn.light {
+  background: var(--surface-3);
+}
+
+.theme-toggle-thumb {
+  background: #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 2px;
+  transition: left 0.3s var(--ease);
+}
+
+.theme-toggle-btn.dark .theme-toggle-thumb {
+  left: 18px;
+}
+
+.theme-toggle-btn.light .theme-toggle-thumb {
+  left: 2px;
+}
