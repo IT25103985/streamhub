@@ -1,0 +1,246 @@
+.watch-history-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+.watch-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.watch-history-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text, #ffffff);
+  margin: 0;
+}
+
+.watch-history-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.watch-history-clear-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.watch-history-clear-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.watch-history-empty {
+  text-align: center;
+  padding: 48px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.watch-history-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 6px;
+}
+
+.watch-history-empty-sub {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-bottom: 16px;
+}
+
+.watch-history-group {
+  margin-bottom: 24px;
+}
+
+.watch-history-group-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 12px;
+  text-transform: capitalize;
+}
+
+.watch-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.watch-history-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.watch-history-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.watch-history-thumb {
+  width: 200px;
+  height: 112px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #18181b;
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+}
+
+.watch-history-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.watch-history-no-thumb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #6b7280;
+  background: #1f2937;
+}
+
+.watch-history-duration {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.watch-history-progress-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.watch-history-progress-fill {
+  height: 100%;
+  background: #ef4444;
+}
+
+.watch-history-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 36px;
+  display: flex;
+  flex-direction: column;
+  height: 112px;
+}
+
+.watch-history-video-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.15s ease;
+}
+
+.watch-history-video-title:hover {
+  color: #60a5fa;
+}
+
+.watch-history-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.watch-history-creator {
+  color: #d1d5db;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.watch-history-creator:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.watch-history-desc {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.watch-history-resume-tag {
+  margin-top: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: #f87171;
+}
+
+.watch-history-options {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+@media (max-width: 600px) {
+  .watch-history-card {
+    flex-direction: column;
+  }
+  .watch-history-thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .watch-history-info {
+    height: auto;
+    padding-right: 32px;
+  }
+}
