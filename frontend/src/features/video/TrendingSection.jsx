@@ -12,7 +12,8 @@ const TrendingSection = ({ limit = 4, onSelectVideo }) => {
     try {
       //fetch public platform trending videos
       const data = await watchHistoryService.getTrendingVideos(limit);
-      setTrendingVideos(data || []);
+      const filtered = (data || []).filter((v) => v && (v.viewCount || 0) >= 10);
+      setTrendingVideos(filtered);
     } catch (err) {
       console.error('Failed to load trending videos:', err);
       setTrendingVideos([]);

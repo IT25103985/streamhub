@@ -38,7 +38,24 @@ const SearchResultsPage = () => {
   const fetchRecs = async () => {
     try {
       const recs = await watchHistoryService.getRecommendations(4);
-      setRecommendedVideos(recs || []);
+      const filtered = (recs || []).filter((v) => {
+        if (!v) return false;
+        if ((v.viewCount || 0) < 10) return false;
+        if (user) {
+          const uId = user.userId || user.id;
+          const vOwnerId = v.ownerId || v.uploaderId;
+          if (uId && vOwnerId && String(uId).toLowerCase() === String(vOwnerId).toLowerCase()) {
+            return false;
+          }
+          const uName = user.username;
+          const vOwnerName = v.ownerUsername || v.creator || v.uploaderUsername;
+          if (uName && vOwnerName && String(uName).toLowerCase() === String(vOwnerName).toLowerCase()) {
+            return false;
+          }
+        }
+        return true;
+      });
+      setRecommendedVideos(filtered);
     } catch (err) {
       console.error('Error fetching recommendations', err);
     }

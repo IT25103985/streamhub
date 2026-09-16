@@ -139,12 +139,14 @@ const PlaylistWatchPage = () => {
                                     <div className="yt-actions">
                                         <div className="yt-action-btn-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <LikeButton videoId={currentVideoId} />
-                                            <OptionsMenu items={[
-                                                {
-                                                    label: 'Report',
-                                                    onClick: () => requireAuth(() => setShowReportModal(true))
-                                                }
-                                            ]} />
+                                            {(!user || (user.userId !== videoDetails.uploaderId && user.userId !== videoDetails.ownerId && user.username !== videoDetails.uploaderUsername && user.username !== videoDetails.creator)) && (
+                                                <OptionsMenu items={[
+                                                    {
+                                                        label: 'Report',
+                                                        onClick: () => requireAuth(() => setShowReportModal(true))
+                                                    }
+                                                ]} />
+                                            )}
                                         </div>
                                     </div>
                                 </div>

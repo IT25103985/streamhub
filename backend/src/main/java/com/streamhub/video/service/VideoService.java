@@ -169,6 +169,22 @@ public class VideoService {
             }
 
             Video savedVideo = videoRepository.save(video);
+            
+            if (owner != null && notificationService != null) {
+                try {
+                    notificationService.createNotification(
+                        owner.getUserId(),
+                        "VIDEO_UPLOAD",
+                        "Video Uploaded Successfully",
+                        "Your video \"" + savedVideo.getTitle() + "\" has been successfully uploaded and is now live.",
+                        "VIDEO",
+                        savedVideo.getVideoId()
+                    );
+                } catch (Exception notifEx) {
+                    System.err.println("Failed to send video upload notification: " + notifEx.getMessage());
+                }
+            }
+
             return mapToDTO(savedVideo);
         } catch (IOException ex) {
             throw new RuntimeException("Could not store file. Please try again!", ex);
@@ -519,20 +535,31 @@ public class VideoService {
             }
         }
 
-        // 4. Send moderation notification to video owner if applicable
-        if (owner != null && notificationService != null && (moderator != null || (reason != null && !reason.trim().isEmpty()))) {
-            String cleanReason = (reason != null && !reason.trim().isEmpty()) ? reason.trim() : "Violation of platform community guidelines";
+        // 4. Send notification to video owner
+        if (owner != null && notificationService != null) {
             try {
-                notificationService.createNotification(
-                    owner.getUserId(),
-                    "MODERATION_ACTION",
-                    "Video Removed by Moderation",
-                    "Your video \"" + videoTitle + "\" was removed by a moderator. Reason: " + cleanReason + ".",
-                    "VIDEO",
-                    videoId
-                );
+                if (moderator != null || (reason != null && !reason.trim().isEmpty())) {
+                    String cleanReason = (reason != null && !reason.trim().isEmpty()) ? reason.trim() : "Violation of platform community guidelines";
+                    notificationService.createNotification(
+                        owner.getUserId(),
+                        "MODERATION_ACTION",
+                        "Video Removed by Moderation",
+                        "Your video \"" + videoTitle + "\" was removed by a moderator. Reason: " + cleanReason + ".",
+                        "VIDEO",
+                        videoId
+                    );
+                } else {
+                    notificationService.createNotification(
+                        owner.getUserId(),
+                        "VIDEO_DELETE",
+                        "Video Deleted",
+                        "Your video \"" + videoTitle + "\" has been successfully deleted.",
+                        "VIDEO",
+                        videoId
+                    );
+                }
             } catch (Exception notifEx) {
-                System.err.println("Failed to send moderation notification: " + notifEx.getMessage());
+                System.err.println("Failed to send video deletion notification: " + notifEx.getMessage());
             }
         }
     }

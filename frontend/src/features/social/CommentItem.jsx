@@ -28,12 +28,14 @@ const CommentItem = ({
   const [isReplying, setIsReplying] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
 
-  const isAuthor = user && user.userId === comment.authorId;
+  const isAuthor = user && (user.userId === comment.authorId || user.username === comment.authorUsername);
   const hasReplies = comment.replies && comment.replies.length > 0;
 
-  const menuItems = [
-    { label: 'Report', onClick: () => requireAuth(() => onReport(comment.commentId)) }
-  ];
+  const menuItems = [];
+
+  if (!isAuthor) {
+    menuItems.push({ label: 'Report', onClick: () => requireAuth(() => onReport(comment.commentId)) });
+  }
 
   if (isAuthor) {
     menuItems.push({ label: 'Edit', onClick: () => setIsEditing(true) });

@@ -78,11 +78,14 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
         
         //map notification type to target page route
         if (notification.relatedEntityType === 'VIDEO' && notification.relatedEntityId) {
-            navigate(`/watch/${notification.relatedEntityId}`);
+            navigate(`/?watch=${notification.relatedEntityId}`);
+        } else if (notification.relatedEntityType === 'PLAYLIST' && notification.relatedEntityId) {
+            navigate(`/playlist/${notification.relatedEntityId}`);
+        } else if (notification.relatedEntityType === 'REPORT') {
+            navigate(`/my-reports`);
         } else if (notification.relatedEntityType === 'PROFILE' && notification.relatedEntityId) {
             navigate(`/profile/${notification.relatedEntityId}`);
         } else {
-            //fallback to home route
             navigate('/');
         }
     };

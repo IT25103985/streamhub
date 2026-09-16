@@ -1,6 +1,7 @@
 package com.streamhub.playlist.service;
 
 import com.streamhub.common.entity.User;
+import com.streamhub.notification.service.NotificationService;
 import com.streamhub.playlist.dto.CreatePlaylistDTO;
 import com.streamhub.playlist.dto.PlaylistDetailDTO;
 import com.streamhub.playlist.dto.PlaylistResponseDTO;
@@ -35,17 +36,21 @@ public class PlaylistService {
     private final PlaylistVideoRepository playlistVideoRepository;
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
     private final Path coverStorageLocation;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public PlaylistService(PlaylistRepository playlistRepository, 
                            PlaylistVideoRepository playlistVideoRepository, 
                            VideoRepository videoRepository,
                            UserRepository userRepository,
+                           NotificationService notificationService,
                            @Value("${file.playlist-cover-upload-dir:uploads/playlist-covers}") String coverUploadDir) {
         this.playlistRepository = playlistRepository;
         this.playlistVideoRepository = playlistVideoRepository;
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
         this.coverStorageLocation = Paths.get(coverUploadDir).toAbsolutePath().normalize();
 
         try {
@@ -53,6 +58,14 @@ public class PlaylistService {
         } catch (Exception ex) {
             throw new RuntimeException("Could not create directory for playlist covers.", ex);
         }
+    }
+
+    public PlaylistService(PlaylistRepository playlistRepository, 
+                           PlaylistVideoRepository playlistVideoRepository, 
+                           VideoRepository videoRepository,
+                           UserRepository userRepository,
+                           @Value("${file.playlist-cover-upload-dir:uploads/playlist-covers}") String coverUploadDir) {
+        this(playlistRepository, playlistVideoRepository, videoRepository, userRepository, null, coverUploadDir);
     }
 
     @Transactional
@@ -174,6 +187,24 @@ public class PlaylistService {
         int position = playlistVideoRepository.countByPlaylist(playlist);
         PlaylistVideo playlistVideo = new PlaylistVideo(playlist, video, position);
         playlistVideoRepository.save(playlistVideo);
+
+        // Notify video owner if another user adds their video to a public playlist
+        if (notificationService != null && "PUBLIC".equalsIgnoreCase(playlist.getPrivacy()) 
+                && video.getOwner() != null && currentUser != null 
+                && !video.getOwner().getUserId().equals(currentUser.getUserId())) {
+            try {
+                notificationService.createNotification(
+                    video.getOwner().getUserId(),
+                    "PLAYLIST_ADD",
+                    "Video Added to Public Playlist",
+                    currentUser.getUsername() + " added your video \"" + video.getTitle() + "\" to the public playlist \"" + playlist.getName() + "\".",
+                    "PLAYLIST",
+                    playlist.getPlaylistId()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send playlist notification: " + e.getMessage());
+            }
+        }
     }
 
     @Transactional

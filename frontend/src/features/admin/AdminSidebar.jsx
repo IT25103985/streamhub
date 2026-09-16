@@ -7,15 +7,6 @@ const AdminSidebar = ({ role }) => {
 
   if (role === 'ADMINISTRATOR') {
     links.push({ 
-      path: '/admin/categories', 
-      label: 'Categories', 
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-        </svg>
-      )
-    });
-    links.push({ 
       path: '/admin/analytics', 
       label: 'Analytics', 
       icon: (
@@ -33,6 +24,15 @@ const AdminSidebar = ({ role }) => {
           <circle cx="9" cy="7" r="4"></circle>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
           <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      )
+    });
+    links.push({ 
+      path: '/admin/categories', 
+      label: 'Categories', 
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
       )
     });
@@ -83,12 +83,33 @@ const AdminSidebar = ({ role }) => {
         </svg>
       )
     });
+    links.push({
+      path: '/admin/help',
+      label: 'Help Center',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      )
+    });
   }
 
   return (
     <aside className="admin-sidebar">
       <div className="admin-sidebar-header">
-        <Link to="/" className="logo" style={{ fontSize: '19px' }}>Stream<span>Hub</span></Link>
+        <Link 
+          to="/" 
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('streamhub-reset-home'));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }} 
+          className="logo" 
+          style={{ fontSize: '19px' }}
+        >
+          Stream<span>Hub</span>
+        </Link>
       </div>
       <nav className="admin-sidebar-nav">
         {links.map((link) => (

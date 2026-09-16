@@ -318,11 +318,13 @@ const WatchHistoryPage = () => {
                                                             icon: ICONS.playlist,
                                                             onClick: () => requireAuth(() => setPlaylistModalVideoId(videoId))
                                                         },
-                                                        { 
-                                                            label: 'Report', 
-                                                            icon: ICONS.report,
-                                                            onClick: () => requireAuth(() => setReportModalVideoId(videoId))
-                                                        },
+                                                        ...((!user || (user.userId !== video.ownerId && user.userId !== video.uploaderId && user.username !== video.ownerUsername && user.username !== creator)) ? [
+                                                            { 
+                                                                label: 'Report', 
+                                                                icon: ICONS.report,
+                                                                onClick: () => requireAuth(() => setReportModalVideoId(videoId))
+                                                            }
+                                                        ] : []),
                                                         { 
                                                             label: 'Remove from watch history', 
                                                             icon: ICONS.trash,

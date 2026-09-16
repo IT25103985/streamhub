@@ -15,8 +15,8 @@ import java.util.UUID;
 //recommends unwatched videos from categories the user watches most
 public class CategoryAffinityStrategy implements RecommendationStrategy {
 
-    //minimum view count threshold required for category recommendation qualification
-    public static final int MIN_VIEWS_FOR_TRENDING = 5;
+    //minimum view count threshold required for category recommendation qualification (at least 10 views)
+    public static final int MIN_VIEWS_FOR_TRENDING = 10;
 
     private final WatchHistoryRepository watchHistoryRepository;
     private final VideoRepository videoRepository;
@@ -35,15 +35,25 @@ public class CategoryAffinityStrategy implements RecommendationStrategy {
 
         UUID topCategoryId = (UUID) categoryData.get(0)[0];
         
-        //query category videos meeting engagement threshold
-        List<Video> results = new ArrayList<>(videoRepository.findPublicVideosByCategoryWithMinViews(topCategoryId, MIN_VIEWS_FOR_TRENDING, PageRequest.of(0, limit)));
-        if (results.size() < limit) {
-            //backfill remaining slots with lower viewed category videos
-            int remaining = limit - results.size();
-            List<Video> backfill = videoRepository.findPublicVideosByCategoryBelowMinViews(topCategoryId, MIN_VIEWS_FOR_TRENDING, PageRequest.of(0, remaining));
-            results.addAll(backfill);
+        List<Video> results = new ArrayList<>();
+        //query category videos meeting engagement threshold (view count >= 10)
+        List<Video> rawResults = videoRepository.findPublicVideosByCategoryWithMinViews(topCategoryId, MIN_VIEWS_FOR_TRENDING, PageRequest.of(0, limit));
+        if (rawResults != null) {
+            for (Video v : rawResults) {
+                if (v != null && v.getViewCount() >= MIN_VIEWS_FOR_TRENDING && !isOwnVideo(user, v)) {
+                    results.add(v);
+                }
+            }
         }
         return results;
+    }
+
+    private boolean isOwnVideo(User user, Video video) {
+        if (user == null || video == null) return false;
+        if (video.getOwner() == null) return false;
+        if (user.getUserId() != null && user.getUserId().equals(video.getOwner().getUserId())) return true;
+        if (user.getUsername() != null && user.getUsername().equalsIgnoreCase(video.getOwner().getUsername())) return true;
+        return false;
     }
 }
 

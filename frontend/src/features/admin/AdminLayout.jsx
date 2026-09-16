@@ -11,10 +11,17 @@ const AdminNavbar = ({ user, logout }) => {
     navigate('/');
   };
 
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('streamhub-reset-home'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('/');
+  };
+
   return (
     <header style={{ background: 'rgba(10,13,22,.92)', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', margin: 0, borderBottom: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link to="/" className="logo">Stream<span>Hub</span></Link>
+        <Link to="/" onClick={handleLogoClick} className="logo">Stream<span>Hub</span></Link>
         <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, padding: '2px 8px', background: 'rgba(229, 9, 20, 0.15)', color: '#e50914', borderRadius: '4px', border: '1px solid rgba(229, 9, 20, 0.3)' }}>Admin</span>
       </div>
       <div className="header-actions" style={{ flex: 1, justifyContent: 'flex-end', display: 'flex', gap: '20px' }}>

@@ -292,3 +292,20 @@ CREATE TABLE SyncLog (
     CONSTRAINT UQ_SyncLog_FileName UNIQUE (file_name)
 );
 GO
+
+-- ---------------------------------------------------------------------
+-- HELP_TOPIC
+-- ---------------------------------------------------------------------
+CREATE TABLE HelpTopic (
+    id              UNIQUEIDENTIFIER  NOT NULL PRIMARY KEY,
+    section         NVARCHAR(150)     NOT NULL,
+    question        NVARCHAR(255)     NOT NULL,
+    answer          NVARCHAR(2000)    NOT NULL,
+    display_order   INT               NOT NULL DEFAULT 0,
+    created_at      DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at      DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME()
+);
+GO
+CREATE INDEX IX_HelpTopic_Section_DisplayOrder ON HelpTopic(section, display_order);
+GO
+

@@ -15,7 +15,24 @@ const RecommendationsSection = () => {
             try {
                 setLoading(true);
                 const data = await watchHistoryService.getRecommendations(8);
-                setRecommendations(data || []);
+                const filtered = (data || []).filter((v) => {
+                    if (!v) return false;
+                    if ((v.viewCount || 0) < 10) return false;
+                    if (user) {
+                        const uId = user.userId || user.id;
+                        const vOwnerId = v.ownerId || v.uploaderId;
+                        if (uId && vOwnerId && String(uId).toLowerCase() === String(vOwnerId).toLowerCase()) {
+                            return false;
+                        }
+                        const uName = user.username;
+                        const vOwnerName = v.ownerUsername || v.creator || v.uploaderUsername;
+                        if (uName && vOwnerName && String(uName).toLowerCase() === String(vOwnerName).toLowerCase()) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                setRecommendations(filtered);
             } catch (err) {
                 console.error("Failed to load recommendations:", err);
             } finally {

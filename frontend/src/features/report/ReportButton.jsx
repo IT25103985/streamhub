@@ -3,10 +3,18 @@ import { AuthContext } from '../../context/AuthContext';
 import ReportModal from './ReportModal';
 
 //button triggering report modal for flagging inappropriate content
-const ReportButton = ({ reportableType, reportableId, className = '' }) => {
+const ReportButton = ({ reportableType, reportableId, ownerId, className = '' }) => {
     const { user, openAuthModal } = useContext(AuthContext);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReported, setIsReported] = useState(false);
+
+    if (user && ownerId && user.userId === ownerId) {
+        return null;
+    }
+
+    if (user && reportableType === 'PROFILE' && user.userId === reportableId) {
+        return null;
+    }
 
     const handleClick = () => {
         if (!user) {

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { getFullImageUrl } from '../utils/imageUtils';
 import { formatDuration, getVideoDuration } from '../utils/durationUtils';
 import OptionsMenu from './OptionsMenu';
 import ReportModal from '../features/report/ReportModal';
 import AddToPlaylistMenu from '../features/playlist/AddToPlaylistMenu';
-import { useRequireAuth } from '../context/AuthContext';
+import { AuthContext, useRequireAuth } from '../context/AuthContext';
 
 const LABELS = { gaming: "Gaming", music: "Music", movies: "Movies", default: "Video" };
 
@@ -17,6 +17,7 @@ const PLAY_SVG = (
 
 //video preview card displaying thumbnail creator details and views
 const VideoCard = ({ video, featured = false, onClick }) => {
+  const { user } = useContext(AuthContext);
   const requireAuth = useRequireAuth();
   const [showReportModal, setShowReportModal] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -111,7 +112,9 @@ const VideoCard = ({ video, featured = false, onClick }) => {
             onToggle={(open) => setIsMenuOpen(open)}
             items={[
               { label: 'Add to playlist', onClick: handleAddToPlaylistClick },
-              { label: 'Report', onClick: handleReportClick }
+              ...((!user || (user.userId !== uploaderId && user.username !== creator)) ? [
+                { label: 'Report', onClick: handleReportClick }
+              ] : [])
             ]} 
           />
         </div>

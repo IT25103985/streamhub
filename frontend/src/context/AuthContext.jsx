@@ -56,7 +56,11 @@ export const AuthProvider = ({ children }) => {
     //listen for expired session events
     const handleRefreshFailed = () => {
       setUser(null);
+      setToken(null);
       setShowInterestsModal(false);
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
     };
     window.addEventListener('auth-refresh-failed', handleRefreshFailed);
     return () => window.removeEventListener('auth-refresh-failed', handleRefreshFailed);
@@ -130,6 +134,8 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setToken(null);
       setShowInterestsModal(false);
+      window.dispatchEvent(new CustomEvent('streamhub-video-update'));
+      window.location.href = '/';
     }
   };
 

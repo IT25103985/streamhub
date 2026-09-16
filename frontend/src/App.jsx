@@ -12,6 +12,7 @@ import AdminLayout from './features/admin/AdminLayout';
 import AdminPlaylistsPage from './features/playlist/AdminPlaylistsPage';
 import AdminCommentsPage from './features/social/AdminCommentsPage';
 import AdminReportsPage from './features/report/AdminReportsPage';
+import AdminHelpPage from './features/help/AdminHelpPage';
 import AuthModal from './components/AuthModal';
 import InterestsModal from './features/onboarding/InterestsModal';
 import WatchHistoryPage from './features/watchhistory/WatchHistoryPage';
@@ -101,15 +102,16 @@ function App() {
               <AdminLayout />
             </AdminRoute>
           }>
-            <Route index element={<Navigate to={user?.role === 'ADMINISTRATOR' ? "/admin/categories" : "/admin/videos"} replace />} />
-            <Route path="categories" element={<AdminRoute user={user} allowedRoles={['ADMINISTRATOR']}><CategoryManagement /></AdminRoute>} />
+            <Route index element={<Navigate to={user?.role === 'ADMINISTRATOR' ? "/admin/analytics" : "/admin/videos"} replace />} />
+            <Route path="analytics" element={<AdminRoute user={user} allowedRoles={['ADMINISTRATOR']}><AdminAnalyticsPage /></AdminRoute>} />
             <Route path="users" element={<AdminRoute user={user} allowedRoles={['ADMINISTRATOR']}><AdminUsersPage /></AdminRoute>} />
+            <Route path="categories" element={<AdminRoute user={user} allowedRoles={['ADMINISTRATOR']}><CategoryManagement /></AdminRoute>} />
             <Route path="videos" element={<AdminVideosPage />} />
             <Route path="playlists" element={<AdminPlaylistsPage />} />
             <Route path="comments" element={<AdminCommentsPage />} />
             <Route path="reports" element={<AdminReportsPage />} />
-            <Route path="analytics" element={<AdminRoute user={user} allowedRoles={['ADMINISTRATOR']}><AdminAnalyticsPage /></AdminRoute>} />
-            <Route path="*" element={<Navigate to={user?.role === 'ADMINISTRATOR' ? "/admin/categories" : "/admin/videos"} replace />} />
+            <Route path="help" element={<AdminHelpPage />} />
+            <Route path="*" element={<Navigate to={user?.role === 'ADMINISTRATOR' ? "/admin/analytics" : "/admin/videos"} replace />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

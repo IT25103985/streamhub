@@ -32,6 +32,16 @@ const Navbar = () => {
       .catch(err => console.error("Error fetching categories for navbar", err));
   }, []);
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    setSearchQuery('');
+    window.dispatchEvent(new CustomEvent('streamhub-reset-home'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('/');
+  };
+
   //handles global search navigation on enter key
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
@@ -46,11 +56,18 @@ const Navbar = () => {
 
   return (
     <header style={{ background: scrolled ? 'rgba(10,13,22,.92)' : 'rgba(10,13,22,.72)' }}>
-      <Link to="/" className="logo">Stream<span>Hub</span></Link>
+      <Link to="/" onClick={handleLogoClick} className="logo">Stream<span>Hub</span></Link>
       <div className="header-search">
         <label className="search-pill">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" placeholder="Search…" aria-label="Search videos" onKeyDown={handleSearch} />
+          <input 
+            type="text" 
+            placeholder="Search…" 
+            aria-label="Search videos" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch} 
+          />
         </label>
       </div>
       <div className="header-actions">

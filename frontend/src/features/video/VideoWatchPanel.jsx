@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import watchHistoryService from '../watchhistory/watchHistoryService';
@@ -8,13 +8,14 @@ import LikeButton from '../social/LikeButton';
 import OptionsMenu from '../../components/OptionsMenu';
 import ReportModal from '../report/ReportModal';
 import AddToPlaylistMenu from '../playlist/AddToPlaylistMenu';
-import { useRequireAuth } from '../../context/AuthContext';
+import { AuthContext, useRequireAuth } from '../../context/AuthContext';
 import { getFullImageUrl } from '../../utils/imageUtils';
 import Navbar from '../../components/Navbar';
 import './VideoWatchPanel.css';
 
 //full watch modal with video player details and comments section
 const VideoWatchPanel = ({ videoId, onClose }) => {
+  const { user } = useContext(AuthContext);
   const requireAuth = useRequireAuth();
   const [showReportModal, setShowReportModal] = useState(false);
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
@@ -293,10 +294,12 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
                         label: 'Save to Playlist',
                         onClick: () => requireAuth(() => setShowPlaylistMenu(true))
                       },
-                      {
-                        label: 'Report Video',
-                        onClick: () => requireAuth(() => setShowReportModal(true))
-                      }
+                      ...((!user || !video || (user.userId !== video.ownerId && user.userId !== video.uploaderId && user.username !== video.ownerUsername && user.username !== video.uploaderUsername)) ? [
+                        {
+                          label: 'Report Video',
+                          onClick: () => requireAuth(() => setShowReportModal(true))
+                        }
+                      ] : [])
                     ]} 
                   />
                 </div>

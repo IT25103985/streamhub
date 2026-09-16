@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class WatchHistoryService {
 
     //threshold of distinct videos watched before switching from onboarding preferences to behavioral affinity
-    public static final int MIN_WATCHED_FOR_BEHAVIORAL = 5;
+    public static final int MIN_WATCHED_FOR_BEHAVIORAL = 10;
 
     private final WatchHistoryRepository watchHistoryRepository;
     private final VideoRepository videoRepository;
@@ -79,7 +79,9 @@ public class WatchHistoryService {
 
     @Transactional
     public void clearUserHistory(User user) {
-        watchHistoryRepository.deleteByUser(user);
+        if (user != null) {
+            watchHistoryRepository.deleteByUser(user);
+        }
     }
 
     @Transactional
@@ -104,28 +106,57 @@ public class WatchHistoryService {
 
         List<Video> recommendations = new java.util.ArrayList<>();
         
-        if (watchedCount >= MIN_WATCHED_FOR_BEHAVIORAL) {
-            //behavioral affinity based on top watched category
-            recommendations.addAll(categoryAffinityStrategy.getRecommendations(user, limit));
-        } else {
-            //onboarding preferred categories for cold-start users
-            recommendations.addAll(preferredCategoryStrategy.getRecommendations(user, limit));
-        }
-        
-        //fallback to trending if slots remaining after preferred categories or behavioral affinity
-        if (recommendations.size() < limit) {
-            List<Video> trending = trendingFallbackStrategy.getRecommendations(user, limit);
-            for (Video v : trending) {
-                if (!recommendations.contains(v) && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())) && recommendations.size() < limit) {
+        List<Video> primary = (watchedCount >= MIN_WATCHED_FOR_BEHAVIORAL)
+                ? categoryAffinityStrategy.getRecommendations(user, limit)
+                : preferredCategoryStrategy.getRecommendations(user, limit);
+
+        if (primary != null) {
+            for (Video v : primary) {
+                if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < limit) {
                     recommendations.add(v);
                 }
             }
         }
         
+        //fallback to trending if slots remaining after preferred categories or behavioral affinity
+        if (recommendations.size() < limit) {
+            List<Video> trending = trendingFallbackStrategy.getRecommendations(user, limit);
+            if (trending != null) {
+                for (Video v : trending) {
+                    if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < limit) {
+                        recommendations.add(v);
+                    }
+                }
+            }
+        }
+        
         return recommendations.stream()
-                .filter(v -> v != null && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())))
+                .filter(v -> isValidRecommendation(v, user))
                 .map(this::mapVideoToDTO)
                 .collect(Collectors.toList());
+    }
+
+    private boolean isValidRecommendation(Video video, User user) {
+        if (video == null || video.isHidden()) {
+            return false;
+        }
+        if (video.getPrivacy() != null && !"PUBLIC".equalsIgnoreCase(video.getPrivacy())) {
+            return false;
+        }
+        // Recommended videos must have viewCount >= 10
+        if (video.getViewCount() < 10) {
+            return false;
+        }
+        // Exclude user's own videos from recommendations
+        if (user != null && video.getOwner() != null) {
+            if (user.getUserId() != null && user.getUserId().equals(video.getOwner().getUserId())) {
+                return false;
+            }
+            if (user.getUsername() != null && user.getUsername().equalsIgnoreCase(video.getOwner().getUsername())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Transactional(readOnly = true)
@@ -133,7 +164,7 @@ public class WatchHistoryService {
     public List<VideoResponseDTO> getPlatformTrendingVideos(int limit) {
         List<Video> trending = trendingFallbackStrategy.getRecommendations(null, limit);
         return trending.stream()
-                .filter(v -> v != null && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())))
+                .filter(v -> v != null && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())) && v.getViewCount() >= 10)
                 .map(this::mapVideoToDTO)
                 .collect(Collectors.toList());
     }
