@@ -49,7 +49,7 @@ axiosInstance.interceptors.response.use(
       originalRequest.url?.includes('/auth/login') || 
       originalRequest.url?.includes('/auth/register');
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // If a refresh is already in flight, queue this request until it resolves
         return new Promise((resolve, reject) => {
@@ -68,7 +68,7 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await axiosInstance.post('/auth/refresh');
+        const res = await axios.post('http://localhost:8081/api/v1/auth/refresh', {}, { withCredentials: true });
         const newToken = res.data.token;
         setToken(newToken);
         processQueue(null, newToken);
