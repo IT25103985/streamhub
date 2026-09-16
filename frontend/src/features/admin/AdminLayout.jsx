@@ -1,9 +1,16 @@
 import React, { useContext } from 'react';
-import { Link, Navigate, Outlet } from 'react-router-dom';
+import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import AdminSidebar from './AdminSidebar';
 
 const AdminNavbar = ({ user, logout }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
   return (
     <header style={{ background: 'rgba(10,13,22,.92)', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', margin: 0, borderBottom: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -18,7 +25,7 @@ const AdminNavbar = ({ user, logout }) => {
         
         <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
           <span style={{ fontSize: '14px', color: 'var(--text-dim)', fontWeight: 500 }}>
-            {user.username 
+            {user?.username 
               ? (user.username.toLowerCase() === 'admin' 
                   ? 'Admin' 
                   : user.username.toLowerCase() === 'moderator' 
@@ -26,7 +33,7 @@ const AdminNavbar = ({ user, logout }) => {
                     : user.username.charAt(0).toUpperCase() + user.username.slice(1)) 
               : 'Admin'}
           </span>
-          <button className="btn btn-ghost" onClick={logout}>Logout</button>
+          <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
         </div>
       </div>
     </header>

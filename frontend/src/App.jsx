@@ -30,7 +30,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 //protect routes requiring specific roles
 const AdminRoute = ({ user, allowedRoles, children }) => {
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  if (!allowedRoles.includes(user.role)) {
     return (
       <div className="admin-page" style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
         <h2>403 - Forbidden</h2>
