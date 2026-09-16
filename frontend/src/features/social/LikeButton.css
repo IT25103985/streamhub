@@ -1,0 +1,33 @@
+.btn-like, .btn-dislike {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-like:hover:not(:disabled), .btn-dislike:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+.btn-like.active, .btn-dislike.active {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  cursor: default;
+}
+
+.like-button-placeholder {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  color: #888;
+  font-size: 0.9rem;
+}
