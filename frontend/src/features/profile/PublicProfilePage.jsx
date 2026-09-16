@@ -79,8 +79,8 @@ const PublicProfilePage = () => {
       <main className="profile-main-content">
         <ProfileHeader 
           profile={profile} 
-          isOwner={false}
-          onReportClick={handleReportClick}
+          isOwner={Boolean(user && user.userId === userId)}
+          onReportClick={(!user || user.userId !== userId) ? handleReportClick : undefined}
         />
         
         <div className="profile-tabs-section">

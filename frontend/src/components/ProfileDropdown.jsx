@@ -9,7 +9,6 @@ import './ProfileDropdown.css';
 const ProfileDropdown = () => {
   const { user, logout } = useContext(AuthContext);
   const [isOpen, setIsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [userEmail, setUserEmail] = useState(user?.email || '');
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -29,14 +28,6 @@ const ProfileDropdown = () => {
   }, [user]);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('streamhub-theme');
-    if (savedTheme === 'light') {
-      setIsDarkMode(false);
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-  }, []);
-
-  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -45,13 +36,6 @@ const ProfileDropdown = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    localStorage.setItem('streamhub-theme', newTheme ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', newTheme ? 'dark' : 'light');
-  };
 
   const handleLogout = async () => {
     await logout();
@@ -90,16 +74,6 @@ const ProfileDropdown = () => {
           </div>
           
           <div className="profile-menu-divider">
-            <div className="dropdown-item theme-toggle-row">
-              <span>Dark Mode</span>
-              <button 
-                onClick={toggleTheme}
-                className={`theme-toggle-btn ${isDarkMode ? 'dark' : 'light'}`}
-                aria-label="Toggle dark mode"
-              >
-                <div className="theme-toggle-thumb" />
-              </button>
-            </div>
             <Link to="/help" className="dropdown-item" onClick={() => setIsOpen(false)}>Help</Link>
             <Link to="/settings" className="dropdown-item" onClick={() => setIsOpen(false)}>Settings</Link>
           </div>

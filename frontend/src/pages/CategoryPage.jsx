@@ -75,7 +75,8 @@ const CategoryPage = () => {
         if (categoryId === 'trending') {
           const res = await axiosInstance.get('/videos/trending');
           if (!isMounted) return;
-          const newVideos = res.data || [];
+          const rawVideos = res.data || [];
+          const newVideos = rawVideos.filter((v) => v && (v.viewCount || 0) >= 10);
           
           if (query) {
              const lowerQuery = query.toLowerCase();

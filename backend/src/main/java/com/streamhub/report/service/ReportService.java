@@ -64,13 +64,30 @@ public class ReportService {
         User reporter = userRepository.findById(reporterId)
                 .orElseThrow(() -> new RuntimeException("Reporter not found"));
 
-        validateReportableExists(request.getReportableType(), request.getReportableId());
+        validateReportableContent(request.getReportableType(), request.getReportableId(), reporterId);
 
         Report report = new Report(reporter, request.getReportableType(), request.getReportableId(),
                 request.getReason(), request.getDetails());
 
         Report saved = reportRepository.save(report);
-        return new ReportResponse(saved, getPreviewText(saved));
+        String previewText = getPreviewText(saved);
+
+        if (notificationService != null && reporter != null) {
+            try {
+                notificationService.createNotification(
+                    reporter.getUserId(),
+                    "REPORT_SUBMITTED",
+                    "Report Submitted",
+                    "Your report regarding " + request.getReportableType().toLowerCase() + " (\"" + previewText + "\") has been submitted and is pending review by our moderation team.",
+                    "REPORT",
+                    saved.getId()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send report submission notification: " + e.getMessage());
+            }
+        }
+
+        return new ReportResponse(saved, previewText);
     }
 
     @Transactional(readOnly = true)
@@ -110,7 +127,25 @@ public class ReportService {
         if ("RESOLVED".equals(newStatus)) {
             report.setResolvedAt(LocalDateTime.now());
         }
-        return new ReportResponse(reportRepository.save(report), getPreviewText(report));
+        Report savedReport = reportRepository.save(report);
+        String previewText = getPreviewText(savedReport);
+
+        if (notificationService != null && report.getReporter() != null) {
+            try {
+                notificationService.createNotification(
+                    report.getReporter().getUserId(),
+                    "REPORT_STATUS_UPDATE",
+                    "Report Status: " + newStatus,
+                    "Your report regarding " + report.getReportableType().toLowerCase() + " (\"" + previewText + "\") status has been updated to " + newStatus + ".",
+                    "REPORT",
+                    report.getId()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send report status update notification: " + e.getMessage());
+            }
+        }
+
+        return new ReportResponse(savedReport, previewText);
     }
 
     @Transactional
@@ -183,19 +218,48 @@ public class ReportService {
         report.setActionReason(request.getActionReason());
         report.setResolvedAt(LocalDateTime.now());
 
-        if (ownerId != null && !"NONE".equals(action) && notificationService != null) {
-            String title = "Action taken on your " + type.toLowerCase();
-            notificationService.createNotification(
-                    ownerId,
-                    "MODERATION",
-                    title,
-                    request.getActionReason(),
-                    type,
-                    report.getReportableId()
-            );
+        Report savedReport = reportRepository.save(report);
+        String previewText = getPreviewText(savedReport);
+
+        // Notify reporter that action was taken on their submitted report
+        if (notificationService != null && report.getReporter() != null) {
+            try {
+                String actionNote = (request.getActionReason() != null && !request.getActionReason().trim().isEmpty()) 
+                        ? " Reason/Note: " + request.getActionReason().trim() : "";
+                notificationService.createNotification(
+                    report.getReporter().getUserId(),
+                    "REPORT_RESOLVED",
+                    "Report Status Update",
+                    "Your report regarding " + type.toLowerCase() + " (\"" + previewText + "\") has been reviewed by a moderator. Action taken: " + action + "." + actionNote,
+                    "REPORT",
+                    report.getId()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send report action notification to reporter: " + e.getMessage());
+            }
         }
 
-        return new ReportResponse(reportRepository.save(report), getPreviewText(report));
+        // Notify content owner if moderation action was taken
+        if (ownerId != null && !"NONE".equals(action) && notificationService != null) {
+            String title = "Moderation Action Taken on Your " + type.charAt(0) + type.substring(1).toLowerCase();
+            String reasonText = (request.getActionReason() != null && !request.getActionReason().trim().isEmpty())
+                    ? request.getActionReason().trim()
+                    : "Violation of platform community guidelines";
+            try {
+                notificationService.createNotification(
+                    ownerId,
+                    "MODERATION_ACTION",
+                    title,
+                    "A moderation action (" + action + ") was taken on your " + type.toLowerCase() + " (\"" + previewText + "\"). Reason: " + reasonText + ".",
+                    type,
+                    report.getReportableId()
+                );
+            } catch (Exception notifEx) {
+                System.err.println("Failed to send moderation notification to owner: " + notifEx.getMessage());
+            }
+        }
+
+        return new ReportResponse(savedReport, previewText);
     }
 
     @Transactional
@@ -298,16 +362,46 @@ public class ReportService {
         return new ReportResponse(reportRepository.save(report), getPreviewText(report));
     }
 
-    private void validateReportableExists(String type, UUID id) {
-        boolean exists = false;
-        switch (type) {
-            case "VIDEO": exists = videoRepository.existsById(id); break;
-            case "COMMENT": exists = commentRepository.existsById(id); break;
-            case "PLAYLIST": exists = playlistRepository.existsById(id); break;
-            case "PROFILE": exists = userRepository.existsById(id); break;
-            default: throw new IllegalArgumentException("Invalid reportable type");
+    private void validateReportableContent(String type, UUID id, UUID reporterId) {
+        if (type == null || id == null) {
+            throw new IllegalArgumentException("Reportable type and ID must not be null");
         }
-        if (!exists) throw new RuntimeException("Reportable content not found");
+        switch (type.toUpperCase()) {
+            case "VIDEO": {
+                Video video = videoRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Reportable content not found"));
+                if (video.getOwner() != null && video.getOwner().getUserId().equals(reporterId)) {
+                    throw new IllegalArgumentException("You cannot report your own video");
+                }
+                break;
+            }
+            case "COMMENT": {
+                Comment comment = commentRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Reportable content not found"));
+                if (comment.getAuthor() != null && comment.getAuthor().getUserId().equals(reporterId)) {
+                    throw new IllegalArgumentException("You cannot report your own comment");
+                }
+                break;
+            }
+            case "PLAYLIST": {
+                Playlist playlist = playlistRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Reportable content not found"));
+                if (playlist.getOwner() != null && playlist.getOwner().getUserId().equals(reporterId)) {
+                    throw new IllegalArgumentException("You cannot report your own playlist");
+                }
+                break;
+            }
+            case "PROFILE": {
+                User user = userRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Reportable content not found"));
+                if (user.getUserId().equals(reporterId)) {
+                    throw new IllegalArgumentException("You cannot report your own profile");
+                }
+                break;
+            }
+            default:
+                throw new IllegalArgumentException("Invalid reportable type");
+        }
     }
 
     private String getPreviewText(Report report) {

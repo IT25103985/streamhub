@@ -15,6 +15,8 @@ import java.util.UUID;
 //cold start recommendation strategy using onboarding category preferences
 public class PreferredCategoryStrategy implements RecommendationStrategy {
 
+    public static final int MIN_VIEWS_FOR_RECOMMENDATION = 10;
+
     private final UserCategoryPreferenceRepository userCategoryPreferenceRepository;
     private final VideoRepository videoRepository;
     private final TrendingFallbackStrategy trendingFallbackStrategy;
@@ -38,23 +40,42 @@ public class PreferredCategoryStrategy implements RecommendationStrategy {
             return new ArrayList<>();
         }
 
-        //query public videos across preferred categories meeting minimum view count
-        List<Video> results = new ArrayList<>(videoRepository.findPublicVideosByCategoriesWithMinViews(
+        List<Video> results = new ArrayList<>();
+        //query public videos across preferred categories meeting minimum view count (>= 10)
+        List<Video> rawResults = videoRepository.findPublicVideosByCategoriesWithMinViews(
                 preferredCategoryIds,
-                TrendingFallbackStrategy.MIN_VIEWS_FOR_TRENDING,
+                MIN_VIEWS_FOR_RECOMMENDATION,
                 PageRequest.of(0, limit)
-        ));
-
-        //backfill with platform trending if qualifying preferred videos are fewer than requested limit
-        if (results.size() < limit) {
-            List<Video> trending = trendingFallbackStrategy.getRecommendations(user, limit);
-            for (Video v : trending) {
-                if (!results.contains(v) && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())) && results.size() < limit) {
+        );
+        if (rawResults != null) {
+            for (Video v : rawResults) {
+                if (v != null && v.getViewCount() >= MIN_VIEWS_FOR_RECOMMENDATION && !isOwnVideo(user, v)) {
                     results.add(v);
                 }
             }
         }
 
+        //backfill with platform trending if qualifying preferred videos are fewer than requested limit
+        if (results.size() < limit) {
+            List<Video> trending = trendingFallbackStrategy.getRecommendations(user, limit);
+            if (trending != null) {
+                for (Video v : trending) {
+                    if (!results.contains(v) && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())) 
+                            && v.getViewCount() >= MIN_VIEWS_FOR_RECOMMENDATION && !isOwnVideo(user, v) && results.size() < limit) {
+                        results.add(v);
+                    }
+                }
+            }
+        }
+
         return results;
+    }
+
+    private boolean isOwnVideo(User user, Video video) {
+        if (user == null || video == null) return false;
+        if (video.getOwner() == null) return false;
+        if (user.getUserId() != null && user.getUserId().equals(video.getOwner().getUserId())) return true;
+        if (user.getUsername() != null && user.getUsername().equalsIgnoreCase(video.getOwner().getUsername())) return true;
+        return false;
     }
 }

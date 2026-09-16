@@ -1,6 +1,7 @@
 package com.streamhub.social.service;
 
 import com.streamhub.common.entity.User;
+import com.streamhub.notification.service.NotificationService;
 import com.streamhub.social.dto.CommentDTO;
 import com.streamhub.social.dto.CreateCommentDTO;
 import com.streamhub.social.dto.LikeStatusDTO;
@@ -33,12 +34,26 @@ public class SocialService {
     private final LikeRepository likeRepository;
     private final DislikeRepository dislikeRepository;
     private final VideoRepository videoRepository;
+    private final NotificationService notificationService;
 
-    public SocialService(CommentRepository commentRepository, LikeRepository likeRepository, DislikeRepository dislikeRepository, VideoRepository videoRepository) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public SocialService(CommentRepository commentRepository, 
+                         LikeRepository likeRepository, 
+                         DislikeRepository dislikeRepository, 
+                         VideoRepository videoRepository,
+                         NotificationService notificationService) {
         this.commentRepository = commentRepository;
         this.likeRepository = likeRepository;
         this.dislikeRepository = dislikeRepository;
         this.videoRepository = videoRepository;
+        this.notificationService = notificationService;
+    }
+
+    public SocialService(CommentRepository commentRepository, 
+                         LikeRepository likeRepository, 
+                         DislikeRepository dislikeRepository, 
+                         VideoRepository videoRepository) {
+        this(commentRepository, likeRepository, dislikeRepository, videoRepository, null);
     }
 
     //validates user access permission for private or hidden videos
@@ -63,9 +78,10 @@ public class SocialService {
 
         String trimmedText = dto.getText() != null ? dto.getText().trim() : "";
         Comment comment = new Comment(video, user, trimmedText);
+        Comment parent = null;
 
         if (dto.getParentCommentId() != null) {
-            Comment parent = commentRepository.findById(dto.getParentCommentId())
+            parent = commentRepository.findById(dto.getParentCommentId())
                     .orElseThrow(() -> new RuntimeException("Parent comment not found"));
             
             //flatten nested replies into single level thread
@@ -77,6 +93,47 @@ public class SocialService {
         }
 
         Comment saved = commentRepository.save(comment);
+
+        if (notificationService != null && user != null) {
+            String commentPreview = trimmedText.length() > 60 ? trimmedText.substring(0, 57) + "..." : trimmedText;
+
+            // Notify video owner if another user commented on their video
+            if (video.getOwner() != null && !video.getOwner().getUserId().equals(user.getUserId())) {
+                try {
+                    notificationService.createNotification(
+                        video.getOwner().getUserId(),
+                        "COMMENT",
+                        "New Comment on Your Video",
+                        user.getUsername() + " commented on your video \"" + video.getTitle() + "\": \"" + commentPreview + "\"",
+                        "VIDEO",
+                        video.getVideoId()
+                    );
+                } catch (Exception e) {
+                    System.err.println("Failed to send comment notification: " + e.getMessage());
+                }
+            }
+
+            // Notify parent comment author if someone replied to their comment
+            if (parent != null && parent.getAuthor() != null) {
+                UUID parentAuthorId = parent.getAuthor().getUserId();
+                UUID videoOwnerId = video.getOwner() != null ? video.getOwner().getUserId() : null;
+                if (!parentAuthorId.equals(user.getUserId()) && !parentAuthorId.equals(videoOwnerId)) {
+                    try {
+                        notificationService.createNotification(
+                            parentAuthorId,
+                            "COMMENT_REPLY",
+                            "New Reply to Your Comment",
+                            user.getUsername() + " replied to your comment on \"" + video.getTitle() + "\": \"" + commentPreview + "\"",
+                            "VIDEO",
+                            video.getVideoId()
+                        );
+                    } catch (Exception e) {
+                        System.err.println("Failed to send comment reply notification: " + e.getMessage());
+                    }
+                }
+            }
+        }
+
         return mapToCommentDTO(saved);
     }
 
@@ -165,6 +222,22 @@ public class SocialService {
             
             Like like = new Like(video, user);
             likeRepository.save(like);
+
+            if (notificationService != null && video.getOwner() != null && user != null 
+                    && !video.getOwner().getUserId().equals(user.getUserId())) {
+                try {
+                    notificationService.createNotification(
+                        video.getOwner().getUserId(),
+                        "LIKE",
+                        "New Like on Your Video",
+                        user.getUsername() + " liked your video \"" + video.getTitle() + "\".",
+                        "VIDEO",
+                        video.getVideoId()
+                    );
+                } catch (Exception e) {
+                    System.err.println("Failed to send like notification: " + e.getMessage());
+                }
+            }
         }
 
         int likeCount = likeRepository.countByVideo(video);
@@ -235,6 +308,22 @@ public class SocialService {
         try {
             Like like = new Like(video, user);
             likeRepository.saveAndFlush(like);
+
+            if (notificationService != null && video.getOwner() != null && user != null 
+                    && !video.getOwner().getUserId().equals(user.getUserId())) {
+                try {
+                    notificationService.createNotification(
+                        video.getOwner().getUserId(),
+                        "LIKE",
+                        "New Like on Your Video",
+                        user.getUsername() + " liked your video \"" + video.getTitle() + "\".",
+                        "VIDEO",
+                        video.getVideoId()
+                    );
+                } catch (Exception e) {
+                    System.err.println("Failed to send like notification: " + e.getMessage());
+                }
+            }
         } catch (DataIntegrityViolationException ex) {
             throw new IllegalStateException("User already liked this video");
         }

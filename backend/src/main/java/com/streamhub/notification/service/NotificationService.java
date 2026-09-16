@@ -27,10 +27,17 @@ public class NotificationService {
 
     @Transactional
     public void createNotification(UUID userId, String type, String title, String message, String relatedEntityType, UUID relatedEntityId) {
-        //use entity reference proxy to avoid extra db query
-        User userRef = entityManager.getReference(User.class, userId);
-        Notification notification = new Notification(userRef, type, title, message, relatedEntityType, relatedEntityId);
-        notificationRepository.save(notification);
+        if (userId == null) return;
+        try {
+            //use entity reference proxy to avoid extra db query
+            User userRef = entityManager.getReference(User.class, userId);
+            String safeTitle = title != null ? (title.length() > 140 ? title.substring(0, 137) + "..." : title) : "Notification";
+            String safeMessage = message != null ? (message.length() > 480 ? message.substring(0, 477) + "..." : message) : "";
+            Notification notification = new Notification(userRef, type, safeTitle, safeMessage, relatedEntityType, relatedEntityId);
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            System.err.println("Failed to create notification for user " + userId + ": " + e.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)

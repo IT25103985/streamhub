@@ -29,8 +29,15 @@ const HomePage = () => {
   const categoryId = searchParams.get('categoryId');
   const activeTab = searchParams.get('tab') || 'videos';
   const page = parseInt(searchParams.get('page') || '0', 10);
+  const watchParam = searchParams.get('watch') || searchParams.get('v');
 
-  const [activeVideoId, setActiveVideoId] = useState(null);
+  const [activeVideoId, setActiveVideoId] = useState(watchParam || null);
+
+  useEffect(() => {
+    if (watchParam) {
+      setActiveVideoId(watchParam);
+    }
+  }, [watchParam]);
 
   const [recommendedVideos, setRecommendedVideos] = useState([]);
   const [libraryVideos, setLibraryVideos] = useState([]);
@@ -46,7 +53,24 @@ const HomePage = () => {
     }
     try {
       const recs = await watchHistoryService.getRecommendations(4);
-      setRecommendedVideos(recs || []);
+      const filtered = (recs || []).filter((v) => {
+        if (!v) return false;
+        if ((v.viewCount || 0) < 10) return false;
+        if (user) {
+          const uId = user.userId || user.id;
+          const vOwnerId = v.ownerId || v.uploaderId;
+          if (uId && vOwnerId && String(uId).toLowerCase() === String(vOwnerId).toLowerCase()) {
+            return false;
+          }
+          const uName = user.username;
+          const vOwnerName = v.ownerUsername || v.creator || v.uploaderUsername;
+          if (uName && vOwnerName && String(uName).toLowerCase() === String(vOwnerName).toLowerCase()) {
+            return false;
+          }
+        }
+        return true;
+      });
+      setRecommendedVideos(filtered);
     } catch (err) {
       console.error('Error fetching recommendations', err);
       setRecommendedVideos([]);
@@ -133,6 +157,20 @@ const HomePage = () => {
       clearInterval(interval);
     };
   }, [query, categoryId, activeTab, page, user]);
+
+  //listen for rollback to home event triggered by clicking StreamHub logo
+  useEffect(() => {
+    const handleResetHome = () => {
+      setActiveVideoId(null);
+      setSearchParams({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('streamhub-reset-home', handleResetHome);
+    return () => {
+      window.removeEventListener('streamhub-reset-home', handleResetHome);
+    };
+  }, [setSearchParams]);
 
   const handleCategoryChange = (catId) => {
     const newParams = new URLSearchParams(searchParams);

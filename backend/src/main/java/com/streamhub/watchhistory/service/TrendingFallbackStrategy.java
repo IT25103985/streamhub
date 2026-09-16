@@ -21,8 +21,8 @@ public class TrendingFallbackStrategy implements RecommendationStrategy {
     //minimum recent watch count threshold required for trending qualification
     public static final int MIN_RECENT_WATCHES_FOR_TRENDING = 5;
 
-    //constant kept for backward compatibility with callers
-    public static final int MIN_VIEWS_FOR_TRENDING = MIN_RECENT_WATCHES_FOR_TRENDING;
+    //minimum view count required for video recommendation (at least 10 views)
+    public static final int MIN_VIEWS_FOR_TRENDING = 10;
 
     private final VideoViewEventRepository videoViewEventRepository;
     private final VideoRepository videoRepository;
@@ -52,37 +52,22 @@ public class TrendingFallbackStrategy implements RecommendationStrategy {
             );
             if (qualifying != null) {
                 for (Video v : qualifying) {
-                    if (results.size() < limit && v != null && v.getVideoId() != null && addedVideoIds.add(v.getVideoId())) {
+                    if (results.size() < limit && v != null && v.getVideoId() != null 
+                            && v.getViewCount() >= MIN_VIEWS_FOR_TRENDING
+                            && !isOwnVideo(user, v) && addedVideoIds.add(v.getVideoId())) {
                         results.add(v);
-                    }
-                }
-            }
-
-            //backfill remaining slots with lower viewed videos within rolling window
-            if (results.size() < limit) {
-                int remaining = limit - results.size();
-                List<Video> backfill = videoViewEventRepository.findTrendingVideosBelowMinWatches(
-                        since,
-                        MIN_RECENT_WATCHES_FOR_TRENDING,
-                        PageRequest.of(0, remaining)
-                );
-                if (backfill != null) {
-                    for (Video v : backfill) {
-                        if (results.size() < limit && v != null && v.getVideoId() != null && addedVideoIds.add(v.getVideoId())) {
-                            results.add(v);
-                        }
                     }
                 }
             }
         }
 
-        //backfill with public non-hidden videos if window has zero or sparse events
+        //backfill with public non-hidden videos meeting min view count
         if (results.size() < limit && videoRepository != null) {
-            List<Video> allPublic = videoRepository.findPublicTrendingVideos(PageRequest.of(0, limit));
+            List<Video> allPublic = videoRepository.findPublicTrendingVideosWithMinViews(MIN_VIEWS_FOR_TRENDING, PageRequest.of(0, limit));
             if (allPublic != null) {
                 for (Video v : allPublic) {
                     if (results.size() >= limit) break;
-                    if (v != null && v.getVideoId() != null && addedVideoIds.add(v.getVideoId())) {
+                    if (v != null && v.getVideoId() != null && v.getViewCount() >= MIN_VIEWS_FOR_TRENDING && !isOwnVideo(user, v) && addedVideoIds.add(v.getVideoId())) {
                         results.add(v);
                     }
                 }
@@ -90,5 +75,13 @@ public class TrendingFallbackStrategy implements RecommendationStrategy {
         }
 
         return results;
+    }
+
+    private boolean isOwnVideo(User user, Video video) {
+        if (user == null || video == null) return false;
+        if (video.getOwner() == null) return false;
+        if (user.getUserId() != null && user.getUserId().equals(video.getOwner().getUserId())) return true;
+        if (user.getUsername() != null && user.getUsername().equalsIgnoreCase(video.getOwner().getUsername())) return true;
+        return false;
     }
 }

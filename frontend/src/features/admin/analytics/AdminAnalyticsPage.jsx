@@ -15,7 +15,8 @@ const AdminAnalyticsPage = () => {
             try {
                 setLoading(true);
                 const data = await watchHistoryService.getAdminTrendingVideos(10);
-                setTrendingVideos(data || []);
+                const filtered = (data || []).filter((v) => v && (v.viewCount || 0) >= 10);
+                setTrendingVideos(filtered);
             } catch (err) {
                 console.error("Failed to load analytics:", err);
                 setError('Failed to load analytics data.');

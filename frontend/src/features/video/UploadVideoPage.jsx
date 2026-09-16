@@ -132,7 +132,7 @@ const UploadVideoPage = () => {
       <div className="upload-container">
         <div className="upload-header">
           <h2>Upload Video</h2>
-          <p>Share your next great moment with the <Link to="/" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>Stream<span style={{ color: '#e50914' }}>Hub</span></Link> community.</p>
+          <p>Share your next great moment with the <Link to="/" onClick={() => { window.dispatchEvent(new CustomEvent('streamhub-reset-home')); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>Stream<span style={{ color: '#e50914' }}>Hub</span></Link> community.</p>
         </div>
         
         {error && <div className="upload-error">{error}</div>}
