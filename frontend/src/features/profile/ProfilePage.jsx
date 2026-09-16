@@ -28,17 +28,22 @@ const ProfilePage = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const fetchProfile = async () => {
+    const fetchProfile = async (retryCount = 0) => {
         try {
             setLoading(true);
             const data = await profileService.getMyProfile();
             setProfile(data);
             setError('');
+            setLoading(false);
         } catch (err) {
             console.error("Failed to fetch profile", err);
-            setError("Failed to load profile. Please try again.");
-        } finally {
-            setLoading(false);
+            if (retryCount < 2) {
+                // Retry in case token was in the middle of refreshing
+                setTimeout(() => fetchProfile(retryCount + 1), 300);
+            } else {
+                setError("Failed to load profile. Please try again.");
+                setLoading(false);
+            }
         }
     };
 

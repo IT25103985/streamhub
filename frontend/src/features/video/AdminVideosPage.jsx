@@ -33,7 +33,7 @@ const AdminVideosPage = () => {
   const fetchVideos = async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
-      const response = await axiosInstance.get('/videos?size=100');
+      const response = await axiosInstance.get('/videos?includeHidden=true&size=100');
       const videoList = response.data?.content || (Array.isArray(response.data) ? response.data : []);
       setVideos(videoList);
       setError('');

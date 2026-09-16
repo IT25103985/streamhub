@@ -137,9 +137,10 @@ public class ReportService {
                     ownerId = video.getOwner().getUserId();
                     if ("HIDDEN".equals(action)) {
                         video.setHidden(true);
+                        video.setPrivacy("PRIVATE");
                         videoRepository.save(video);
                     } else if ("DELETED".equals(action)) {
-                        videoService.moderateDeleteVideo(video.getVideoId());
+                        videoService.moderateDeleteVideo(video.getVideoId(), request.getActionReason(), moderator);
                     }
                 }
                 break;
@@ -218,6 +219,7 @@ public class ReportService {
                     if (video != null) {
                         targetOwnerId = video.getOwner().getUserId();
                         video.setHidden(false);
+                        video.setPrivacy("PUBLIC");
                         videoRepository.save(video);
                     }
                     break;

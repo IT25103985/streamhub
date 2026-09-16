@@ -79,7 +79,7 @@ const EditVideoModal = ({ video, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="upload-container" onClick={e => e.stopPropagation()} style={{ width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
         <button className="modal-close" onClick={onClose} style={{ color: 'var(--text-dim)' }}>&times;</button>
         <div className="upload-header" style={{ textAlign: 'left', marginBottom: '20px' }}>

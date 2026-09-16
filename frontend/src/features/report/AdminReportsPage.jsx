@@ -227,6 +227,7 @@ const AdminReportsPage = () => {
           onActionComplete={() => {
             setSelectedReportId(null);
             window.dispatchEvent(new CustomEvent('streamhub-report-update'));
+            window.dispatchEvent(new CustomEvent('streamhub-video-update'));
             fetchReports(false);
           }}
         />
