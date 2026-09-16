@@ -269,11 +269,15 @@ public class VideoService {
     }
 
     public org.springframework.data.domain.Page<VideoResponseDTO> getAllVideos(UUID uploaderId, String search, UUID categoryId, org.springframework.data.domain.Pageable pageable) {
-        return getAllVideos(uploaderId, search, categoryId, pageable, null);
+        return getAllVideos(uploaderId, search, categoryId, pageable, null, false);
+    }
+
+    public org.springframework.data.domain.Page<VideoResponseDTO> getAllVideos(UUID uploaderId, String search, UUID categoryId, org.springframework.data.domain.Pageable pageable, User currentUser) {
+        return getAllVideos(uploaderId, search, categoryId, pageable, currentUser, false);
     }
 
     //video database filtering and pagination logic
-    public org.springframework.data.domain.Page<VideoResponseDTO> getAllVideos(UUID uploaderId, String search, UUID categoryId, org.springframework.data.domain.Pageable pageable, User currentUser) {
+    public org.springframework.data.domain.Page<VideoResponseDTO> getAllVideos(UUID uploaderId, String search, UUID categoryId, org.springframework.data.domain.Pageable pageable, User currentUser, boolean includeHidden) {
         if (categoryId != null && !categoryRepository.existsById(categoryId)) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Category not found");
         }
@@ -298,7 +302,7 @@ public class VideoService {
                     videoPage = videoRepository.findByOwner_UserId(uploaderId, pageable);
                 }
             }
-        } else if (isAdminOrMod) {
+        } else if (isAdminOrMod && includeHidden) {
             if (uploaderId != null) {
                 if (categoryId != null) {
                     if (hasSearch) {
@@ -382,7 +386,13 @@ public class VideoService {
     public VideoResponseDTO toggleVideoHidden(UUID videoId) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Video not found"));
-        video.setHidden(!video.isHidden());
+        boolean newHidden = !video.isHidden();
+        video.setHidden(newHidden);
+        if (newHidden) {
+            video.setPrivacy("PRIVATE");
+        } else {
+            video.setPrivacy("PUBLIC");
+        }
         Video saved = videoRepository.save(video);
         return mapToDTO(saved);
     }
@@ -430,42 +440,7 @@ public class VideoService {
             throw new RuntimeException("Unauthorized: You can only delete your own videos");
         }
         
-        try {
-            Path videoPath = resolveVideoPath(video.getFilePath());
-            if (videoPath != null) {
-                Files.deleteIfExists(videoPath);
-            }
-            String thumbUrl = video.getThumbnailUrl();
-            if (thumbUrl != null && thumbUrl.startsWith("/uploads/thumbnails/")) {
-                String thumbFilename = thumbUrl.substring("/uploads/thumbnails/".length());
-                if (!thumbFilename.equals("placeholder.png")) {
-                    Files.deleteIfExists(this.thumbnailStorageLocation.resolve(thumbFilename));
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Could not delete physical file: " + e.getMessage());
-        }
-        
-        try {
-            entityManager.createNativeQuery("DELETE FROM [report] WHERE reportable_type = 'VIDEO' AND reportable_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM watch_history WHERE video_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM playlist_video WHERE video_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM [Comment] WHERE video_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM [Like] WHERE video_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM [dislike] WHERE video_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM [notification] WHERE related_entity_type = 'VIDEO' AND related_entity_id = :id")
-                .setParameter("id", videoId).executeUpdate();
-        } catch (Exception e) {
-            System.err.println("Error cleaning dependent video relations: " + e.getMessage());
-        }
-
-        videoRepository.delete(video);
+        deleteVideoInternal(video, null, null);
     }
 
     @Transactional
@@ -479,9 +454,17 @@ public class VideoService {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("Video not found"));
                 
+        deleteVideoInternal(video, reason, moderator);
+    }
+
+    @Transactional
+    public void deleteVideoInternal(Video video, String reason, User moderator) {
+        if (video == null) return;
+        UUID videoId = video.getVideoId();
         User owner = video.getOwner();
         String videoTitle = video.getTitle();
 
+        // 1. Delete physical files from disk
         try {
             Path videoPath = resolveVideoPath(video.getFilePath());
             if (videoPath != null) {
@@ -498,12 +481,15 @@ public class VideoService {
             System.err.println("Could not delete physical file: " + e.getMessage());
         }
         
+        // 2. Clean all dependent relations in proper database order
         try {
-            entityManager.createNativeQuery("DELETE FROM [report] WHERE reportable_type = 'VIDEO' AND reportable_id = :id")
+            entityManager.createNativeQuery("DELETE FROM VideoViewEvent WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM watch_history WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM playlist_video WHERE video_id = :id")
+                .setParameter("id", videoId).executeUpdate();
+            entityManager.createNativeQuery("DELETE FROM [Comment] WHERE video_id = :id AND parent_comment_id IS NOT NULL")
                 .setParameter("id", videoId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM [Comment] WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
@@ -513,14 +499,28 @@ public class VideoService {
                 .setParameter("id", videoId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM [notification] WHERE related_entity_type = 'VIDEO' AND related_entity_id = :id")
                 .setParameter("id", videoId).executeUpdate();
+            entityManager.flush();
         } catch (Exception e) {
             System.err.println("Error cleaning dependent video relations: " + e.getMessage());
         }
 
-        videoRepository.delete(video);
+        // 3. Remove Video record entirely from database
+        try {
+            videoRepository.delete(video);
+            entityManager.flush();
+        } catch (Exception e) {
+            System.err.println("Fallback delete for video entity: " + e.getMessage());
+            try {
+                entityManager.createNativeQuery("DELETE FROM Video WHERE video_id = :id")
+                    .setParameter("id", videoId).executeUpdate();
+                entityManager.flush();
+            } catch (Exception ex2) {
+                System.err.println("Direct native delete also failed: " + ex2.getMessage());
+            }
+        }
 
-        //send notification to video owner explaining removal
-        if (owner != null && notificationService != null) {
+        // 4. Send moderation notification to video owner if applicable
+        if (owner != null && notificationService != null && (moderator != null || (reason != null && !reason.trim().isEmpty()))) {
             String cleanReason = (reason != null && !reason.trim().isEmpty()) ? reason.trim() : "Violation of platform community guidelines";
             try {
                 notificationService.createNotification(
@@ -534,6 +534,43 @@ public class VideoService {
             } catch (Exception notifEx) {
                 System.err.println("Failed to send moderation notification: " + notifEx.getMessage());
             }
+        }
+    }
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @Transactional
+    public void cleanupOrphanedAndModeratedVideos() {
+        try {
+            // Fix previous actions: Delete video records that were marked as DELETED in resolved reports
+            List<UUID> reportedDeletedVideoIds = entityManager.createQuery(
+                "SELECT DISTINCT r.reportableId FROM Report r WHERE r.reportableType = 'VIDEO' AND r.status = 'RESOLVED' AND r.moderatorAction = 'DELETED' AND r.reportableId IS NOT NULL", 
+                UUID.class
+            ).getResultList();
+
+            if (reportedDeletedVideoIds != null) {
+                for (UUID vid : reportedDeletedVideoIds) {
+                    if (vid != null) {
+                        videoRepository.findById(vid).ifPresent(v -> {
+                            System.out.println("Cleaning up previously moderated/deleted video: " + vid + " (" + v.getTitle() + ")");
+                            deleteVideoInternal(v, "Moderation resolved deletion", null);
+                        });
+                    }
+                }
+            }
+
+            // Also cleanup videos whose physical video file no longer exists on disk
+            List<Video> allVideos = videoRepository.findAll();
+            for (Video v : allVideos) {
+                if (v.getFilePath() != null && !v.getFilePath().trim().isEmpty()) {
+                    Path p = resolveVideoPath(v.getFilePath());
+                    if (p == null || !Files.exists(p)) {
+                        System.out.println("Cleaning up ghost video with missing physical file: " + v.getVideoId() + " (" + v.getTitle() + ")");
+                        deleteVideoInternal(v, "Missing physical file cleanup", null);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error running video cleanup on startup: " + e.getMessage());
         }
     }
 

@@ -99,7 +99,7 @@ const AddToPlaylistMenu = ({ videoId, onClose }) => {
     };
 
     return ReactDOM.createPortal(
-        <div className="profile-modal-overlay" onClick={(e) => e.stopPropagation()} style={{ zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="profile-modal-overlay" onClick={(e) => e.stopPropagation()} style={{ zIndex: 10000, backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <div className="profile-modal-content" ref={menuRef} onClick={(e) => e.stopPropagation()} style={{ width: '350px', padding: '16px', maxHeight: '80vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <h3 style={{ margin: 0 }}>Add to playlist</h3>

@@ -43,7 +43,8 @@ const ReportDetailModal = ({ reportId, onClose, onActionComplete }) => {
             onActionComplete();
         } catch (err) {
             console.error('Error taking action:', err);
-            alert(err.response?.data || 'Failed to take action.');
+            const errorMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response?.data : null) || 'Failed to take action.';
+            alert(errorMsg);
         } finally {
             setActionLoading(false);
         }
@@ -60,7 +61,8 @@ const ReportDetailModal = ({ reportId, onClose, onActionComplete }) => {
             if (onActionComplete) onActionComplete();
         } catch (err) {
             console.error('Error reversing action:', err);
-            alert(err.response?.data || 'Failed to reverse action.');
+            const errorMsg = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response?.data : null) || 'Failed to reverse action.';
+            alert(errorMsg);
         } finally {
             setActionLoading(false);
         }

@@ -153,6 +153,7 @@ public class VideoController {
             @RequestParam(required = false) String uploaderId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UUID categoryId,
+            @RequestParam(value = "includeHidden", defaultValue = "false") boolean includeHidden,
             org.springframework.data.domain.Pageable pageable,
             Principal principal) {
         
@@ -169,7 +170,7 @@ public class VideoController {
             }
         }
         
-        return ResponseEntity.ok(videoService.getAllVideos(parsedUploaderId, search, categoryId, pageable, currentUser));
+        return ResponseEntity.ok(videoService.getAllVideos(parsedUploaderId, search, categoryId, pageable, currentUser, includeHidden));
     }
 
     @GetMapping("/{id}")
