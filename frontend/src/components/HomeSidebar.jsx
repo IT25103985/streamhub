@@ -13,40 +13,18 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
   const navigate = useNavigate();
 
   const fetchPlaylists = () => {
-    if (user) {
-      axiosInstance.get('/playlists/mine')
-        .then(res => {
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            setPlaylists(res.data);
-          } else {
-            // If user has no personal playlists, fallback to public playlists
-            axiosInstance.get('/playlists/public')
-              .then(pubRes => {
-                if (Array.isArray(pubRes.data)) setPlaylists(pubRes.data);
-                else setPlaylists([]);
-              })
-              .catch(() => setPlaylists([]));
-          }
-        })
-        .catch(() => {
-          axiosInstance.get('/playlists/public')
-            .then(pubRes => {
-              if (Array.isArray(pubRes.data)) setPlaylists(pubRes.data);
-            })
-            .catch(() => setPlaylists([]));
-        });
-    } else {
-      // Guest view: fetch public playlists
-      axiosInstance.get('/playlists/public')
-        .then(res => {
-          if (Array.isArray(res.data)) {
-            setPlaylists(res.data);
-          } else {
-            setPlaylists([]);
-          }
-        })
-        .catch(() => setPlaylists([]));
-    }
+    axiosInstance.get('/playlists/public')
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setPlaylists(res.data);
+        } else {
+          setPlaylists([]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch public playlists for sidebar:', err);
+        setPlaylists([]);
+      });
   };
 
   useEffect(() => {
@@ -180,32 +158,31 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
                   <span className="sidebar-playlist-name">{item.name}</span>
                 </Link>
               ))
-            ) : user ? (
-              <div style={{ padding: '6px 12px', fontSize: '12.5px', color: 'var(--text-dim)' }}>
-                <p style={{ margin: '0 0 6px 0' }}>No playlists yet</p>
-                <Link to="/my-playlists" style={{ color: 'var(--accent, #6366f1)', textDecoration: 'none', fontSize: '12px', fontWeight: 500 }}>
-                  + Create playlist
-                </Link>
-              </div>
             ) : (
               <div style={{ padding: '6px 12px', fontSize: '12.5px', color: 'var(--text-dim)' }}>
-                <p style={{ margin: '0 0 8px 0', fontSize: '12px' }}>Sign in to view and save playlists</p>
-                <button 
-                  className="btn btn-ghost" 
-                  onClick={() => openAuthModal('login')}
-                  style={{ 
-                    width: '100%', 
-                    fontSize: '12px', 
-                    padding: '6px 10px', 
-                    border: '1px solid var(--border)',
-                    borderRadius: '6px',
-                    color: 'var(--text)',
-                    background: 'var(--surface-2)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Sign In
-                </button>
+                <p style={{ margin: '0 0 6px 0' }}>No public playlists yet</p>
+                {user ? (
+                  <Link to="/my-playlists" style={{ color: 'var(--accent, #6366f1)', textDecoration: 'none', fontSize: '12px', fontWeight: 500 }}>
+                    + Create playlist
+                  </Link>
+                ) : (
+                  <button 
+                    className="btn btn-ghost" 
+                    onClick={() => openAuthModal('login')}
+                    style={{ 
+                      width: '100%', 
+                      fontSize: '12px', 
+                      padding: '6px 10px', 
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      color: 'var(--text)',
+                      background: 'var(--surface-2)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Sign In
+                  </button>
+                )}
               </div>
             )}
           </div>
