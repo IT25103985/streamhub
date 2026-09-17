@@ -463,4 +463,14 @@ public class ReportService {
         }
         return snapshot;
     }
+
+    @Transactional(readOnly = true)
+    public long countByStatus(String status) {
+        if (status == null) {
+            return 0L;
+        }
+        return reportRepository.findAll().stream()
+                .filter(r -> r.getStatus() != null && r.getStatus().equalsIgnoreCase(status))
+                .count();
+    }
 }

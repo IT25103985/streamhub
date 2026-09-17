@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.Base64;
+import java.util.List;
 
 
 @Service
@@ -211,5 +212,29 @@ public class AuthService {
             this.expiresAt = expiresAt;
             this.isPersistent = isPersistent;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public long countAll() {
+        return userRepository.count();
+    }
+
+    @Transactional(readOnly = true)
+    public List<java.util.Map<String, Object>> countSignupsByDay(int days) {
+        //builds consecutive day buckets oldest date first
+        List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        LocalDate today = LocalDate.now();
+        List<User> users = userRepository.findAll();
+        for (int i = days - 1; i >= 0; i--) {
+            LocalDate targetDate = today.minusDays(i);
+            long count = users.stream()
+                    .filter(u -> u.getCreatedAt() != null && u.getCreatedAt().toLocalDate().equals(targetDate))
+                    .count();
+            java.util.Map<String, Object> entry = new java.util.HashMap<>();
+            entry.put("date", targetDate.toString());
+            entry.put("count", count);
+            result.add(entry);
+        }
+        return result;
     }
 }
