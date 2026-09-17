@@ -35,6 +35,7 @@ public class CategoryService {
         }
         
         return categories.stream()
+                .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }

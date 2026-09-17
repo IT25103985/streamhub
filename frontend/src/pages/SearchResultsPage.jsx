@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
+import { AuthContext } from '../context/AuthContext';
 import { playlistService } from '../features/playlist/playlistService';
 import VideoCard from '../components/VideoCard';
 import PlaylistCard from '../features/playlist/PlaylistCard';
@@ -19,6 +20,7 @@ const PAGE_SIZE = 8;
 
 //global search results page with tabbed videos and playlists views
 const SearchResultsPage = () => {
+  const { user } = useContext(AuthContext);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const query = searchParams.get('q') || searchParams.get('search') || '';
@@ -36,6 +38,10 @@ const SearchResultsPage = () => {
 
   //loads recommendations for the side navigation
   const fetchRecs = async () => {
+    if (!user) {
+      setRecommendedVideos([]);
+      return;
+    }
     try {
       const recs = await watchHistoryService.getRecommendations(4);
       const filtered = (recs || []).filter((v) => {
@@ -109,7 +115,7 @@ const SearchResultsPage = () => {
 
   useEffect(() => {
     fetchRecs();
-  }, []);
+  }, [user]);
 
   //fetches active tab data on filter or search parameter change
   useEffect(() => {
