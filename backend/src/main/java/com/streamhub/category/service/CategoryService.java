@@ -87,4 +87,9 @@ public class CategoryService {
     private CategoryDto mapToDto(Category category) {
         return new CategoryDto(category.getId(), category.getName(), category.getDescription());
     }
+
+    @Transactional(readOnly = true)
+    public long countAll() {
+        return categoryRepository.count();
+    }
 }

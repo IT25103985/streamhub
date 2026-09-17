@@ -676,4 +676,8 @@ public class VideoService {
         }
         return dto;
     }
+
+    public long countAll() {
+        return videoRepository.count();
+    }
 }

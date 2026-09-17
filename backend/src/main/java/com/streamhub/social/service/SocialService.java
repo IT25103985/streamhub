@@ -368,4 +368,14 @@ public class SocialService {
                 repliesDTO
         );
     }
+
+    @Transactional(readOnly = true)
+    public long countComments() {
+        return commentRepository.count();
+    }
+
+    @Transactional(readOnly = true)
+    public long countLikes() {
+        return likeRepository.count();
+    }
 }
