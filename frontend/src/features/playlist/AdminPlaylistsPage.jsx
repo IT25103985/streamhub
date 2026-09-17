@@ -58,28 +58,34 @@ const AdminPlaylistsPage = () => {
     { 
       key: 'isHidden', 
       label: 'Status',
-      render: (item) => item.isHidden ? <span style={{color: 'var(--accent-color)'}}>Hidden</span> : 'Visible'
+      render: (item) => {
+        const isHidden = item.isHidden ?? item.hidden;
+        return isHidden ? <span style={{color: 'var(--accent-color)'}}>Hidden</span> : 'Visible';
+      }
     }
   ];
 
-  const actions = (item) => (
-    <div className="admin-table-actions">
-      <button 
-        className="btn-action"
-        style={{ marginRight: '8px', backgroundColor: item.isHidden ? 'var(--primary-color)' : 'var(--text-faint)', color: 'var(--bg-color)', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
-        onClick={() => handleToggleHide(item.playlistId)}
-      >
-        {item.isHidden ? 'Unhide' : 'Hide'}
-      </button>
-      <button 
-        className="btn-action"
-        style={{ backgroundColor: '#ff4d4f', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
-        onClick={() => handleDelete(item.playlistId)}
-      >
-        Delete
-      </button>
-    </div>
-  );
+  const actions = (item) => {
+    const isHidden = item.isHidden ?? item.hidden;
+    return (
+      <div className="admin-table-actions">
+        <button 
+          className="btn-action"
+          style={{ marginRight: '8px', backgroundColor: isHidden ? 'var(--primary-color)' : 'var(--text-faint)', color: 'var(--bg-color)', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
+          onClick={() => handleToggleHide(item.playlistId)}
+        >
+          {isHidden ? 'Unhide' : 'Hide'}
+        </button>
+        <button 
+          className="btn-action"
+          style={{ backgroundColor: '#ff4d4f', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
+          onClick={() => handleDelete(item.playlistId)}
+        >
+          Delete
+        </button>
+      </div>
+    );
+  };
 
   //admin playlist table section
   return (
