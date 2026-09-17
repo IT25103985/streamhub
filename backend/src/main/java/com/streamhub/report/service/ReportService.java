@@ -89,7 +89,7 @@ public class ReportService {
 
         return new ReportResponse(saved, previewText);
     }
-
+    //READ
     @Transactional(readOnly = true)
     public Page<ReportResponse> getMyReports(UUID reporterId, Pageable pageable) {
         return reportRepository.findByReporter_UserId(reporterId, pageable)
@@ -117,7 +117,7 @@ public class ReportService {
                 .orElseThrow(() -> new RuntimeException("Report not found"));
         return new ReportDetailResponse(new ReportResponse(report, getPreviewText(report)), buildContentSnapshot(report));
     }
-
+//Update
     @Transactional
     public ReportResponse updateReportStatus(UUID reportId, String newStatus) {
         Report report = reportRepository.findById(reportId)
@@ -160,7 +160,7 @@ public class ReportService {
         String type = report.getReportableType();
         String action = request.getAction();
         UUID ownerId = null;
-
+// Moderation Business Rule Validation
         if ("PROFILE".equals(type) && ("HIDDEN".equals(action) || "DELETED".equals(action))) {
             throw new IllegalArgumentException("Cannot hide or delete a user profile directly");
         }
@@ -174,6 +174,10 @@ public class ReportService {
                         video.setHidden(true);
                         video.setPrivacy("PRIVATE");
                         videoRepository.save(video);
+
+                        
+                        //DELETE Video----------------
+                        
                     } else if ("DELETED".equals(action)) {
                         videoService.moderateDeleteVideo(video.getVideoId(), request.getActionReason(), moderator);
                     }
@@ -186,6 +190,7 @@ public class ReportService {
                     if ("HIDDEN".equals(action)) {
                         comment.setHidden(true);
                         commentRepository.save(comment);
+                        //COMMENT delete------------------
                     } else if ("DELETED".equals(action)) {
                         socialService.moderateDeleteComment(comment.getCommentId());
                     }
@@ -198,6 +203,7 @@ public class ReportService {
                     if ("HIDDEN".equals(action)) {
                         playlist.setHidden(true);
                         playlistRepository.save(playlist);
+                        //Playlist deleted------------------------
                     } else if ("DELETED".equals(action)) {
                         //remove reported playlist entity
                         playlistRepository.delete(playlist);
@@ -331,7 +337,7 @@ public class ReportService {
                     break;
             }
         }
-
+// Input Sanitization & Fallback Validation
         String reason = (request != null && request.getReason() != null && !request.getReason().trim().isEmpty())
                 ? request.getReason().trim()
                 : "Moderation action was reversed after review";
@@ -361,6 +367,7 @@ public class ReportService {
 
         return new ReportResponse(reportRepository.save(report), getPreviewText(report));
     }
+    //Entity Existence & Data Integrity Validation
 
     private void validateReportableContent(String type, UUID id, UUID reporterId) {
         if (type == null || id == null) {
