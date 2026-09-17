@@ -146,9 +146,15 @@ public class PlaylistService {
         }
 
         boolean isOwner = (requester != null && requester.getUserId().equals(ownerId));
+        boolean isAdminOrMod = requester != null && ("ADMINISTRATOR".equals(requester.getRole()) || "CONTENT_MODERATOR".equals(requester.getRole()));
 
         return playlists.stream()
-                .filter(p -> isOwner || "PUBLIC".equals(p.getPrivacy()))
+                .filter(p -> {
+                    if (p.isHidden() && !isOwner && !isAdminOrMod) {
+                        return false;
+                    }
+                    return isOwner || isAdminOrMod || "PUBLIC".equals(p.getPrivacy());
+                })
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -158,10 +164,15 @@ public class PlaylistService {
         Playlist playlist = playlistRepository.findById(playlistId)
                 .orElseThrow(() -> new RuntimeException("Playlist not found"));
         
-        if ("PRIVATE".equals(playlist.getPrivacy())) {
-            if (currentUser == null || !playlist.getOwner().getUserId().equals(currentUser.getUserId())) {
-                throw new RuntimeException("Playlist not found"); //hide private playlist existence from non owners
-            }
+        boolean isOwner = currentUser != null && playlist.getOwner() != null && currentUser.getUserId().equals(playlist.getOwner().getUserId());
+        boolean isAdminOrMod = currentUser != null && ("ADMINISTRATOR".equals(currentUser.getRole()) || "CONTENT_MODERATOR".equals(currentUser.getRole()));
+
+        if (playlist.isHidden() && !isOwner && !isAdminOrMod) {
+            throw new RuntimeException("Playlist not found");
+        }
+
+        if ("PRIVATE".equals(playlist.getPrivacy()) && !isOwner && !isAdminOrMod) {
+            throw new RuntimeException("Playlist not found"); //hide private playlist existence from non owners
         }
         
         return mapToDetailDTO(playlist, currentUser);

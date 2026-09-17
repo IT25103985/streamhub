@@ -1,5 +1,6 @@
 package com.streamhub.playlist.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ public class PlaylistResponseDTO {
     private String ownerUsername;
     private String privacy;
     private String thumbnailUrl;
+    @JsonProperty("isHidden")
     private boolean isHidden;
     private int videoCount;
     private LocalDateTime createdAt;

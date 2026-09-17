@@ -33,6 +33,7 @@ const PlaylistCard = ({ playlist, isOwner, onPlaylistUpdated }) => {
   const creator = playlist.ownerUsername || playlist.uploaderUsername || playlist.creator || 'Unknown';
   const videoCount = typeof playlist.videoCount === 'number' ? playlist.videoCount : (playlist.videos?.length || 0);
   const isPrivate = playlist.privacy === 'PRIVATE' || playlist.isPublic === false;
+  const isHidden = playlist.isHidden ?? playlist.hidden;
 
   const handleCardClick = () => {
     navigate(`/playlist/${playlistId}`);
@@ -110,7 +111,7 @@ const PlaylistCard = ({ playlist, isOwner, onPlaylistUpdated }) => {
             />
           )}
 
-          {playlist.isHidden && (
+          {isHidden && (
             <span
               className="trending-badge"
               style={{
@@ -131,7 +132,7 @@ const PlaylistCard = ({ playlist, isOwner, onPlaylistUpdated }) => {
               style={{
                 backgroundColor: 'var(--surface-3, #2f2f3d)',
                 color: 'var(--text, #F5F5F7)',
-                left: playlist.isHidden ? '84px' : '8px',
+                left: isHidden ? '84px' : '8px',
                 right: 'auto',
                 border: '1px solid var(--border, rgba(255, 255, 255, 0.2))'
               }}
