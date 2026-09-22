@@ -152,7 +152,7 @@ public class SocialService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        return commentRepository.findByVideoAndParentCommentIsNullOrderByCreatedAtDesc(video, pageable)
+        return commentRepository.findVisibleByVideoAndParentCommentIsNullOrderByCreatedAtDesc(video, pageable)
                 .map(this::mapToCommentDTO);
     }
 
@@ -170,7 +170,7 @@ public class SocialService {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Video not found");
         }
 
-        return commentRepository.findByVideoAndParentCommentIsNullOrderByCreatedAtDesc(video).stream()
+        return commentRepository.findVisibleByVideoAndParentCommentIsNullOrderByCreatedAtDesc(video).stream()
                 .map(this::mapToCommentDTO)
                 .collect(Collectors.toList());
     }
@@ -350,6 +350,7 @@ public class SocialService {
         java.util.List<CommentDTO> repliesDTO = new java.util.ArrayList<>();
         if (comment.getParentComment() == null && comment.getReplies() != null && !comment.getReplies().isEmpty()) {
             repliesDTO = comment.getReplies().stream()
+                    .filter(r -> !r.isHidden())
                     .map(this::mapToCommentDTO)
                     .collect(Collectors.toList());
         }
@@ -365,7 +366,8 @@ public class SocialService {
                 comment.getText(),
                 createdAt,
                 parentId,
-                repliesDTO
+                repliesDTO,
+                comment.isHidden()
         );
     }
 

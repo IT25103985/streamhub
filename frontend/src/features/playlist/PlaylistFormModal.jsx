@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { playlistService } from './playlistService';
+import { getFullImageUrl } from '../../utils/imageUtils';
 import '../profile/Profile.css';
 
 //modal dialog to create or edit a playlist name description and cover art
 const PlaylistFormModal = ({ playlist, onClose, onSaveSuccess }) => {
     const isEditMode = !!playlist;
+    const fileInputRef = useRef(null);
     
     const [name, setName] = useState(playlist?.name || '');
     const [privacy, setPrivacy] = useState(playlist?.privacy || 'PUBLIC');
     const [description, setDescription] = useState(playlist?.description || '');
     const [thumbnailFile, setThumbnailFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
     const [removeThumbnail, setRemoveThumbnail] = useState(false);
     
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    useEffect(() => {
+        if (thumbnailFile) {
+            const objectUrl = URL.createObjectURL(thumbnailFile);
+            setPreviewUrl(objectUrl);
+            return () => URL.revokeObjectURL(objectUrl);
+        } else {
+            setPreviewUrl(null);
+        }
+    }, [thumbnailFile]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -39,7 +52,11 @@ const PlaylistFormModal = ({ playlist, onClose, onSaveSuccess }) => {
 
     const handleRemoveThumbnail = () => {
         setThumbnailFile(null);
+        setPreviewUrl(null);
         setRemoveThumbnail(true);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const handleSave = async (e) => {
@@ -57,9 +74,9 @@ const PlaylistFormModal = ({ playlist, onClose, onSaveSuccess }) => {
             const formData = new FormData();
             
             const dataBlob = new Blob([JSON.stringify({
-                name,
+                name: name.trim(),
                 privacy,
-                description,
+                description: description ? description.trim() : '',
                 removeThumbnail
             })], { type: 'application/json' });
             
@@ -140,13 +157,19 @@ const PlaylistFormModal = ({ playlist, onClose, onSaveSuccess }) => {
 
                     <div className="profile-form-group">
                         <label>Custom Thumbnail (Max 2MB)</label>
-                        {isEditMode && playlist.thumbnailUrl && !removeThumbnail && !thumbnailFile && (
-                            <div style={{ marginBottom: '8px' }}>
-                                <img src={`http://localhost:8080${playlist.thumbnailUrl}`} alt="Current thumbnail" style={{ width: '100px', borderRadius: '4px' }} />
-                                <button type="button" onClick={handleRemoveThumbnail} style={{ marginLeft: '8px', color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>Remove</button>
+                        {previewUrl ? (
+                            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <img src={previewUrl} alt="Thumbnail preview" style={{ width: '120px', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-color, rgba(255,255,255,0.2))' }} />
+                                <button type="button" onClick={handleRemoveThumbnail} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Remove image</button>
                             </div>
-                        )}
+                        ) : (isEditMode && playlist.thumbnailUrl && !removeThumbnail && (
+                            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <img src={getFullImageUrl(playlist.thumbnailUrl)} alt="Current thumbnail" style={{ width: '120px', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-color, rgba(255,255,255,0.2))' }} />
+                                <button type="button" onClick={handleRemoveThumbnail} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Remove</button>
+                            </div>
+                        ))}
                         <input 
+                            ref={fileInputRef}
                             type="file" 
                             accept="image/jpeg, image/png, image/webp" 
                             onChange={handleFileChange}
