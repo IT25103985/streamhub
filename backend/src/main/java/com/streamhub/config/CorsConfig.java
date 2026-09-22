@@ -15,6 +15,9 @@ public class CorsConfig implements WebMvcConfigurer {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    @Value("${file.playlist-cover-upload-dir:uploads/playlist-covers}")
+    private String playlistCoverUploadDir;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
@@ -30,7 +33,7 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/uploads/thumbnails/**")
                 .addResourceLocations("file:" + thumbnailPath.toString() + "/");
                 
-        Path playlistCoverPath = Paths.get(uploadDir, "playlist-covers").toAbsolutePath().normalize();
+        Path playlistCoverPath = Paths.get(playlistCoverUploadDir).toAbsolutePath().normalize();
         registry.addResourceHandler("/uploads/playlist-covers/**")
                 .addResourceLocations("file:" + playlistCoverPath.toString() + "/");
     }

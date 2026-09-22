@@ -103,13 +103,21 @@ const PlaylistCard = ({ playlist, isOwner, onPlaylistUpdated }) => {
               src={getFullImageUrl(playlist.thumbnailUrl)}
               alt={title}
               className="thumb-img"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                if (e.target.nextSibling) {
+                  e.target.nextSibling.style.display = 'block';
+                }
+              }}
             />
-          ) : (
-            <div
-              className="art gaming"
-              style={{ backgroundPosition: '50% 50%' }}
-            />
-          )}
+          ) : null}
+          <div
+            className="art gaming"
+            style={{ 
+              backgroundPosition: '50% 50%',
+              display: playlist.thumbnailUrl ? 'none' : 'block'
+            }}
+          />
 
           {isHidden && (
             <span
