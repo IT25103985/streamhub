@@ -1,5 +1,6 @@
 package com.streamhub.social.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,6 +18,8 @@ public class CommentDTO {
     private LocalDateTime createdAt;
     private UUID parentCommentId;
     private java.util.List<CommentDTO> replies;
+    @JsonProperty("isHidden")
+    private boolean isHidden;
 
     public CommentDTO() {}
 
@@ -45,6 +48,21 @@ public class CommentDTO {
         this.createdAt = createdAt;
         this.parentCommentId = parentCommentId;
         this.replies = replies;
+    }
+
+    public CommentDTO(UUID commentId, UUID videoId, String videoTitle, UUID authorId, String authorUsername, String authorName, String authorAvatarUrl, String text, LocalDateTime createdAt, UUID parentCommentId, java.util.List<CommentDTO> replies, boolean isHidden) {
+        this.commentId = commentId;
+        this.videoId = videoId;
+        this.videoTitle = videoTitle;
+        this.authorId = authorId;
+        this.authorUsername = authorUsername;
+        this.authorName = authorName;
+        this.authorAvatarUrl = authorAvatarUrl;
+        this.text = text;
+        this.createdAt = createdAt;
+        this.parentCommentId = parentCommentId;
+        this.replies = replies;
+        this.isHidden = isHidden;
     }
 
     public UUID getCommentId() { return commentId; }
@@ -79,4 +97,8 @@ public class CommentDTO {
 
     public java.util.List<CommentDTO> getReplies() { return replies; }
     public void setReplies(java.util.List<CommentDTO> replies) { this.replies = replies; }
+
+    public boolean isHidden() { return isHidden; }
+    public void setHidden(boolean hidden) { this.isHidden = hidden; }
 }
+

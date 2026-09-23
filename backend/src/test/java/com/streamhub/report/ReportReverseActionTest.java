@@ -108,4 +108,45 @@ public class ReportReverseActionTest {
         assertNull(report.getModeratorAction(), "Moderator action should be cleared");
         assertTrue(report.getActionReason().contains("Mistakenly flagged"));
     }
+
+    @Test
+    void testTakeActionAndReverseActionOnComment() {
+        com.streamhub.social.entity.Comment comment = new com.streamhub.social.entity.Comment();
+        comment.setCommentId(UUID.randomUUID());
+        comment.setText("Abusive comment");
+        comment.setAuthor(videoOwner);
+        comment.setVideo(video);
+        comment.setHidden(false);
+
+        Report commentReport = new Report();
+        commentReport.setId(UUID.randomUUID());
+        commentReport.setReportableType("COMMENT");
+        commentReport.setReportableId(comment.getCommentId());
+        commentReport.setReporter(new User());
+        commentReport.setStatus("PENDING");
+
+        when(reportRepository.findById(commentReport.getId())).thenReturn(Optional.of(commentReport));
+        when(userRepository.findById(moderator.getUserId())).thenReturn(Optional.of(moderator));
+        when(commentRepository.findById(comment.getCommentId())).thenReturn(Optional.of(comment));
+        when(reportRepository.save(any(Report.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Take hide action on comment
+        ReportActionRequest actionReq = new ReportActionRequest();
+        actionReq.setAction("HIDDEN");
+        actionReq.setActionReason("Harassment");
+        reportService.takeAction(commentReport.getId(), moderator.getUserId(), actionReq);
+
+        assertTrue(comment.isHidden(), "Comment should be hidden after moderation action");
+        assertEquals("RESOLVED", commentReport.getStatus());
+        assertEquals("HIDDEN", commentReport.getModeratorAction());
+
+        // Reverse action on comment
+        ReportReverseActionRequest reverseReq = new ReportReverseActionRequest("Approved on appeal");
+        reportService.reverseAction(commentReport.getId(), moderator.getUserId(), reverseReq);
+
+        assertFalse(comment.isHidden(), "Comment should be unhidden after reverse action");
+        assertEquals("PENDING", commentReport.getStatus(), "Report status should be reset to PENDING");
+        assertNull(commentReport.getModeratorAction(), "Moderator action should be cleared");
+    }
 }
+

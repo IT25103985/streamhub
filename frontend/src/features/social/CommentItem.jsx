@@ -29,7 +29,8 @@ const CommentItem = ({
   const [showReplies, setShowReplies] = useState(false);
 
   const isAuthor = user && (user.userId === comment.authorId || user.username === comment.authorUsername);
-  const hasReplies = comment.replies && comment.replies.length > 0;
+  const visibleReplies = (comment.replies || []).filter(r => !r.isHidden && !r.hidden);
+  const hasReplies = visibleReplies.length > 0;
 
   const menuItems = [];
 
@@ -187,12 +188,12 @@ const CommentItem = ({
             className="btn-toggle-replies" 
             onClick={() => setShowReplies(!showReplies)}
           >
-            {showReplies ? 'Hide replies' : `View ${comment.replies.length} replies`}
+            {showReplies ? 'Hide replies' : `View ${visibleReplies.length} ${visibleReplies.length === 1 ? 'reply' : 'replies'}`}
           </button>
 
           {showReplies && (
             <div className="comment-replies-list">
-              {comment.replies.map(reply => (
+              {visibleReplies.map(reply => (
                 <CommentItem 
                   key={reply.commentId} 
                   comment={reply} 

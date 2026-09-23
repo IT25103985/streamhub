@@ -23,8 +23,9 @@ const CommentList = ({ videoId }) => {
       try {
         const res = await axiosInstance.get(`/comments?videoId=${videoId}&page=0&size=10`);
         const data = res.data.content || res.data;
-        setComments(data);
-        setHasMore(res.data.last !== undefined ? !res.data.last : data.length === 10);
+        const visible = Array.isArray(data) ? data.filter(c => !c.isHidden && !c.hidden) : [];
+        setComments(visible);
+        setHasMore(res.data.last !== undefined ? !res.data.last : visible.length === 10);
       } catch (err) {
         console.error('Failed to fetch comments', err);
       } finally {
@@ -33,6 +34,15 @@ const CommentList = ({ videoId }) => {
     };
 
     fetchComments();
+
+    const handleUpdate = () => fetchComments();
+    window.addEventListener('streamhub-report-update', handleUpdate);
+    window.addEventListener('streamhub-comment-update', handleUpdate);
+
+    return () => {
+      window.removeEventListener('streamhub-report-update', handleUpdate);
+      window.removeEventListener('streamhub-comment-update', handleUpdate);
+    };
   }, [videoId]);
 
   const loadMore = () => {
@@ -40,8 +50,9 @@ const CommentList = ({ videoId }) => {
     axiosInstance.get(`/comments?videoId=${videoId}&page=${nextPage}&size=10`)
       .then(res => {
         const data = res.data.content || res.data;
-        setComments(prev => [...prev, ...data]);
-        setHasMore(res.data.last !== undefined ? !res.data.last : data.length === 10);
+        const visible = Array.isArray(data) ? data.filter(c => !c.isHidden && !c.hidden) : [];
+        setComments(prev => [...prev, ...visible]);
+        setHasMore(res.data.last !== undefined ? !res.data.last : visible.length === 10);
         setPage(nextPage);
       })
       .catch(err => {

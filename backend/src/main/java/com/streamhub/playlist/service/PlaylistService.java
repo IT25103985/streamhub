@@ -324,15 +324,19 @@ public class PlaylistService {
     }
 
     private String getComputedThumbnail(Playlist playlist) {
-        if (playlist.getThumbnailUrl() != null) {
+        if (playlist.getThumbnailUrl() != null && !playlist.getThumbnailUrl().trim().isEmpty()) {
             return playlist.getThumbnailUrl();
         }
 
         List<PlaylistVideo> videos = playlist.getPlaylistVideos();
         if (videos != null && !videos.isEmpty()) {
-            return videos.get(0).getVideo().getThumbnailUrl();
+            for (PlaylistVideo pv : videos) {
+                if (pv.getVideo() != null && pv.getVideo().getThumbnailUrl() != null && !pv.getVideo().getThumbnailUrl().trim().isEmpty()) {
+                    return pv.getVideo().getThumbnailUrl();
+                }
+            }
         }
-        return "/placeholder-playlist.png";
+        return null;
     }
 
     private PlaylistResponseDTO mapToResponseDTO(Playlist playlist) {
