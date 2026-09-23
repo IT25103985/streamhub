@@ -84,7 +84,7 @@ public class PlaylistService {
     @Transactional
     public PlaylistResponseDTO updatePlaylist(UUID playlistId, UpdatePlaylistDTO dto, User owner, MultipartFile thumbnail) {
         Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new RuntimeException("Playlist not found"));
+                .orElseThrow(() -> new RuntimeException("Playlist not found")); //Checks whether the playlist exists.
         
         if (!playlist.getOwner().getUserId().equals(owner.getUserId())) {
             throw new RuntimeException("Unauthorized: You can only edit your own playlists");
