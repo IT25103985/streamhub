@@ -86,6 +86,8 @@ const ProfilePage = () => {
         <div className="page-container" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
             <ProfileHeader 
                 profile={profile} 
+                userId={user?.userId}
+                isOwner={true}
                 onEditClick={() => setIsEditModalOpen(true)} 
             />
 

@@ -61,6 +61,45 @@
     color: var(--text-secondary, #aaaaaa);
 }
 
+.profile-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.profile-stat-btn {
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border-radius: var(--radius-sm, 8px);
+    color: var(--text-dim, #9aa3c0);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.profile-stat-btn strong {
+    color: var(--text, #f5f5f7);
+    font-weight: 700;
+}
+
+.profile-stat-btn:hover {
+    color: var(--text, #f5f5f7);
+    background: var(--surface-2, rgba(255, 255, 255, 0.06));
+}
+
+.profile-stat-text {
+    color: var(--text-dim, #9aa3c0);
+    font-size: 0.875rem;
+}
+
+.profile-stat-text strong {
+    color: var(--text, #f5f5f7);
+    font-weight: 700;
+}
+
 .profile-bio {
     margin: 8px 0 0 0;
     font-size: var(--font-size-md, 16px);

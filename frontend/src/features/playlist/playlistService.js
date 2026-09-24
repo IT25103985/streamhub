@@ -35,8 +35,12 @@ const playlistService = {
     const response = await axiosInstance.get('/playlists/search', { params });
     return response.data;
   },
-  getPlaylistsByOwner: async (ownerId, onlyOwnVideos = false) => {
-    const response = await axiosInstance.get(`/playlists?ownerId=${ownerId}&onlyOwnVideos=${onlyOwnVideos}`);
+  getPlaylistsByOwner: async (ownerId, onlyOwnVideos = false, search = '') => {
+    let url = `/playlists?ownerId=${ownerId}&onlyOwnVideos=${onlyOwnVideos}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    const response = await axiosInstance.get(url);
     return response.data;
   },
   getPlaylistDetails: async (id) => {

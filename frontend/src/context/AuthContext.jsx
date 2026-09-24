@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axiosInstance, { setToken } from '../api/axiosInstance';
 import { checkNeedsOnboarding } from '../api/onboardingApi';
+import websocketClient from '../api/websocketClient';
 
 export //authentication provider managing user session token and login state
 const AuthContext = createContext();
@@ -57,6 +58,7 @@ export const AuthProvider = ({ children }) => {
     const handleRefreshFailed = () => {
       setUser(null);
       setToken(null);
+      websocketClient.disconnect();
       setShowInterestsModal(false);
       if (window.location.pathname !== '/') {
         window.location.href = '/';
@@ -65,6 +67,26 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('auth-refresh-failed', handleRefreshFailed);
     return () => window.removeEventListener('auth-refresh-failed', handleRefreshFailed);
   }, []);
+
+  // Wire WebSocket lifecycle to authenticated user state
+  useEffect(() => {
+    if (user) {
+      websocketClient.connect(
+        () => {
+          // TEMPORARY TEST (PART 2): Verify WebSocket ping/pong round trip (remove in Part 3)
+          websocketClient.subscribe('/user/queue/pong', (msg) => {
+            console.log('[WebSocket Test] Pong received from server:', msg);
+          });
+          websocketClient.publish('/app/ping', {});
+        },
+        (error) => {
+          console.error('[WebSocket] Connection error:', error);
+        }
+      );
+    } else {
+      websocketClient.disconnect();
+    }
+  }, [user]);
 
   const login = async (email, password, keepMeLoggedIn) => {
     try {

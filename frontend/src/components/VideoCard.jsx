@@ -89,6 +89,7 @@ const VideoCard = ({ video, featured = false, onClick }) => {
   return (
     <article 
       className="tile" 
+      data-video-id={video.videoId || video.id}
       data-cat={styleCat} 
       data-title={title.toLowerCase()}
       onClick={(e) => {

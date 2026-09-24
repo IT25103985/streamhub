@@ -108,4 +108,15 @@ public class SocialController {
         LikeStatusDTO status = socialService.getLikeStatus(videoId, user);
         return ResponseEntity.ok(status);
     }
+
+    @PostMapping("/comments/{commentId}/like")
+    @PreAuthorize("isAuthenticated()")
+    //toggles like state for a comment
+    public ResponseEntity<LikeStatusDTO> toggleCommentLike(@PathVariable UUID commentId, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        LikeStatusDTO status = socialService.toggleCommentLike(commentId, user);
+        return ResponseEntity.ok(status);
+    }
 }

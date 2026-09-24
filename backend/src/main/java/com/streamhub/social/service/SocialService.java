@@ -35,25 +35,28 @@ public class SocialService {
     private final DislikeRepository dislikeRepository;
     private final VideoRepository videoRepository;
     private final NotificationService notificationService;
+    private final com.streamhub.social.repository.CommentLikeRepository commentLikeRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public SocialService(CommentRepository commentRepository, 
                          LikeRepository likeRepository, 
                          DislikeRepository dislikeRepository, 
                          VideoRepository videoRepository,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         com.streamhub.social.repository.CommentLikeRepository commentLikeRepository) {
         this.commentRepository = commentRepository;
         this.likeRepository = likeRepository;
         this.dislikeRepository = dislikeRepository;
         this.videoRepository = videoRepository;
         this.notificationService = notificationService;
+        this.commentLikeRepository = commentLikeRepository;
     }
 
     public SocialService(CommentRepository commentRepository, 
                          LikeRepository likeRepository, 
                          DislikeRepository dislikeRepository, 
                          VideoRepository videoRepository) {
-        this(commentRepository, likeRepository, dislikeRepository, videoRepository, null);
+        this(commentRepository, likeRepository, dislikeRepository, videoRepository, null, null);
     }
 
     //validates user access permission for private or hidden videos
@@ -134,7 +137,7 @@ public class SocialService {
             }
         }
 
-        return mapToCommentDTO(saved);
+        return mapToCommentDTO(saved, user);
     }
 
     @Transactional(readOnly = true)
@@ -153,7 +156,7 @@ public class SocialService {
 
         Pageable pageable = PageRequest.of(page, size);
         return commentRepository.findVisibleByVideoAndParentCommentIsNullOrderByCreatedAtDesc(video, pageable)
-                .map(this::mapToCommentDTO);
+                .map(comment -> mapToCommentDTO(comment, user));
     }
 
     @Transactional(readOnly = true)
@@ -171,7 +174,7 @@ public class SocialService {
         }
 
         return commentRepository.findVisibleByVideoAndParentCommentIsNullOrderByCreatedAtDesc(video).stream()
-                .map(this::mapToCommentDTO)
+                .map(comment -> mapToCommentDTO(comment, user))
                 .collect(Collectors.toList());
     }
 
@@ -198,7 +201,7 @@ public class SocialService {
     @Transactional(readOnly = true)
     public List<CommentDTO> getAllCommentsForAdmin() {
         return commentRepository.findAll().stream()
-                .map(this::mapToCommentDTO)
+                .map(comment -> mapToCommentDTO(comment, null))
                 .collect(Collectors.toList());
     }
 
@@ -301,6 +304,46 @@ public class SocialService {
     }
 
     @Transactional
+    public LikeStatusDTO toggleCommentLike(UUID commentId, User user) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Comment not found"));
+
+        if (!canUserAccessVideo(comment.getVideo(), user)) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Video not found");
+        }
+
+        Optional<com.streamhub.social.entity.CommentLike> existingLike = commentLikeRepository.findByCommentAndUser(comment, user);
+
+        if (existingLike.isPresent()) {
+            commentLikeRepository.delete(existingLike.get());
+        } else {
+            com.streamhub.social.entity.CommentLike like = new com.streamhub.social.entity.CommentLike(comment, user);
+            commentLikeRepository.save(like);
+
+            if (notificationService != null && comment.getAuthor() != null && user != null 
+                    && !comment.getAuthor().getUserId().equals(user.getUserId())) {
+                try {
+                    notificationService.createNotification(
+                        comment.getAuthor().getUserId(),
+                        "COMMENT_LIKE",
+                        "New Like on Your Comment",
+                        user.getUsername() + " liked your comment on \"" + comment.getVideo().getTitle() + "\".",
+                        "COMMENT",
+                        comment.getCommentId()
+                    );
+                } catch (Exception e) {
+                    System.err.println("Failed to send comment like notification: " + e.getMessage());
+                }
+            }
+        }
+
+        int likeCount = commentLikeRepository.countByComment(comment);
+        boolean userLiked = !existingLike.isPresent();
+
+        return new LikeStatusDTO(likeCount, userLiked, 0, false);
+    }
+
+    @Transactional
     public void addLike(UUID videoId, User user) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("Video not found"));
@@ -340,10 +383,10 @@ public class SocialService {
         
         comment.setText(dto.getText() != null ? dto.getText().trim() : "");
         Comment saved = commentRepository.save(comment);
-        return mapToCommentDTO(saved);
+        return mapToCommentDTO(saved, user);
     }
 
-    private CommentDTO mapToCommentDTO(Comment comment) {
+    private CommentDTO mapToCommentDTO(Comment comment, User user) {
         java.time.LocalDateTime createdAt = comment.getCreatedAt() != null ? comment.getCreatedAt() : java.time.LocalDateTime.now();
         UUID parentId = comment.getParentComment() != null ? comment.getParentComment().getCommentId() : null;
         
@@ -351,11 +394,11 @@ public class SocialService {
         if (comment.getParentComment() == null && comment.getReplies() != null && !comment.getReplies().isEmpty()) {
             repliesDTO = comment.getReplies().stream()
                     .filter(r -> !r.isHidden())
-                    .map(this::mapToCommentDTO)
+                    .map(r -> mapToCommentDTO(r, user))
                     .collect(Collectors.toList());
         }
 
-        return new CommentDTO(
+        CommentDTO dto = new CommentDTO(
                 comment.getCommentId(),
                 comment.getVideo().getVideoId(),
                 comment.getVideo().getTitle(),
@@ -369,6 +412,15 @@ public class SocialService {
                 repliesDTO,
                 comment.isHidden()
         );
+        
+        if (commentLikeRepository != null) {
+            dto.setLikeCount(commentLikeRepository.countByComment(comment));
+            if (user != null) {
+                dto.setLikedByMe(commentLikeRepository.existsByCommentAndUser(comment, user));
+            }
+        }
+        
+        return dto;
     }
 
     @Transactional(readOnly = true)

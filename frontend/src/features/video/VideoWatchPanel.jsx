@@ -11,7 +11,34 @@ import AddToPlaylistMenu from '../playlist/AddToPlaylistMenu';
 import { AuthContext, useRequireAuth } from '../../context/AuthContext';
 import { getFullImageUrl } from '../../utils/imageUtils';
 import Navbar from '../../components/Navbar';
+import FollowButton from '../../components/FollowButton';
+import { getFollowCounts } from '../../api/followApi';
 import './VideoWatchPanel.css';
+
+const renderDescriptionWithLinks = (text) => {
+  if (!text) return 'No description provided.';
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a 
+          key={i} 
+          href={part} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onClick={(e) => e.stopPropagation()}
+          style={{ color: 'var(--accent-light, #818cf8)', textDecoration: 'none' }}
+          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 //full watch modal with video player details and comments section
 const VideoWatchPanel = ({ videoId, onClose }) => {
@@ -23,6 +50,9 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [initialPosition, setInitialPosition] = useState(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  
+  const [followerCount, setFollowerCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
   
   const panelRef = useRef(null);
   const hasCountedView = useRef(false);
@@ -86,6 +116,22 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
     };
   }, [videoId]);
 
+  useEffect(() => {
+    const uploaderId = video?.uploaderId || video?.ownerId;
+    if (uploaderId) {
+      getFollowCounts(uploaderId)
+        .then(data => {
+          if (data) {
+            setFollowerCount(data.followerCount || 0);
+            setIsFollowing(Boolean(data.isFollowing));
+          }
+        })
+        .catch(err => {
+          // silent fail
+        });
+    }
+  }, [video?.uploaderId, video?.ownerId]);
+
   const handlePlay = (time) => {
     const playTime = typeof time === 'number' ? time : currentPosRef.current;
     currentPosRef.current = playTime;
@@ -125,6 +171,23 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
     currentPosRef.current = time;
   };
 
+  const handleEnded = (time) => {
+    currentPosRef.current = time;
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+    saveProgress(time);
+
+    const autoplayEnabled = localStorage.getItem('autoplay_enabled');
+    if ((autoplayEnabled === 'true' || autoplayEnabled === null) && hasNext) {
+      // Small delay for better UX before jumping
+      setTimeout(() => {
+        handlePlayNext();
+      }, 1000);
+    }
+  };
+
   const handleClose = () => {
     saveProgress(currentPosRef.current);
     window.dispatchEvent(new CustomEvent('streamhub-video-update', { detail: { videoId } }));
@@ -141,6 +204,48 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  const [hasPrev, setHasPrev] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
+
+  // Helper to get a unique list of videos currently on the page
+  const getUniqueVideos = () => {
+    const rawTiles = Array.from(document.querySelectorAll('.tile[data-video-id]'));
+    const uniqueIds = new Set();
+    const uniqueTiles = [];
+    rawTiles.forEach(tile => {
+      const id = tile.getAttribute('data-video-id');
+      if (id && !uniqueIds.has(id)) {
+        uniqueIds.add(id);
+        uniqueTiles.push(tile);
+      }
+    });
+    return uniqueTiles;
+  };
+
+  useEffect(() => {
+    if (!videoId) return;
+    const tiles = getUniqueVideos();
+    const currentIndex = tiles.findIndex(t => t.getAttribute('data-video-id') === videoId);
+    setHasPrev(currentIndex > 0);
+    setHasNext(currentIndex >= 0 && currentIndex < tiles.length - 1);
+  }, [videoId]);
+
+  const handlePlayPrevious = () => {
+    const tiles = getUniqueVideos();
+    const currentIndex = tiles.findIndex(t => t.getAttribute('data-video-id') === videoId);
+    if (currentIndex > 0) {
+      tiles[currentIndex - 1].click();
+    }
+  };
+
+  const handlePlayNext = () => {
+    const tiles = getUniqueVideos();
+    const currentIndex = tiles.findIndex(t => t.getAttribute('data-video-id') === videoId);
+    if (currentIndex >= 0 && currentIndex < tiles.length - 1) {
+      tiles[currentIndex + 1].click();
+    }
+  };
 
   //close panel when clicking backdrop overlay
   const handleBackdropClick = (e) => {
@@ -201,6 +306,22 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
               <div className="watch-stage-container">
                 
                 <div className="watch-player-frame">
+                  {hasPrev && (
+                    <button className="watch-panel-nav-btn watch-panel-prev-btn" onClick={handlePlayPrevious} aria-label="Previous video">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {hasNext && (
+                    <button className="watch-panel-nav-btn watch-panel-next-btn" onClick={handlePlayNext} aria-label="Next video">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </button>
+                  )}
+
                   <button className="watch-panel-close-btn" onClick={handleClose} aria-label="Close video player">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -214,6 +335,7 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
                     onPlay={handlePlay}
                     onPause={handlePause}
                     onTimeUpdate={handleTimeUpdate}
+                    onEnded={handleEnded}
                   />
                 </div>
 
@@ -279,8 +401,24 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
                   </div>
                   <div className="watch-profile-info">
                     <span className="watch-profile-name">{creatorName}</span>
+                    <span className="watch-profile-followers" style={{ fontSize: '13px', color: 'var(--text-dim)' }}>
+                      {new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(followerCount)} followers
+                    </span>
                   </div>
                 </Link>
+                {video && (video.uploaderId || video.ownerId) && (
+                  <div>
+                    <FollowButton
+                      targetUserId={video.uploaderId || video.ownerId}
+                      initialIsFollowing={isFollowing}
+                      onFollowChange={(following, targetId) => {
+                        setIsFollowing(following);
+                        setFollowerCount(prev => following ? prev + 1 : Math.max(0, prev - 1));
+                      }}
+                      size="sm"
+                    />
+                  </div>
+                )}
               </div>
 
               
@@ -338,7 +476,7 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
                   overflow: 'hidden'
                 })
               }}>
-                {video.description || 'No description provided.'}
+                {renderDescriptionWithLinks(video.description)}
               </div>
 
               <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: 'bold', color: '#9ca3af' }}>

@@ -129,6 +129,44 @@
   transform: scale(1.08);
 }
 
+.watch-panel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  opacity: 0;
+}
+
+.watch-player-frame:hover .watch-panel-nav-btn {
+  opacity: 1;
+}
+
+.watch-panel-nav-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent-light);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.watch-panel-prev-btn {
+  left: 20px;
+}
+
+.watch-panel-next-btn {
+  right: 20px;
+}
+
 
 .watch-video-title {
   font-size: 19px;

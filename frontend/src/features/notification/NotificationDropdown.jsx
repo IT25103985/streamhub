@@ -83,7 +83,7 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
             navigate(`/playlist/${notification.relatedEntityId}`);
         } else if (notification.relatedEntityType === 'REPORT') {
             navigate(`/my-reports`);
-        } else if (notification.relatedEntityType === 'PROFILE' && notification.relatedEntityId) {
+        } else if ((notification.relatedEntityType === 'PROFILE' || notification.relatedEntityType === 'USER' || notification.type === 'FOLLOW') && notification.relatedEntityId) {
             navigate(`/profile/${notification.relatedEntityId}`);
         } else {
             navigate('/');

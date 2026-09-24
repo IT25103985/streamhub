@@ -5,6 +5,8 @@ import com.streamhub.common.exception.ResourceNotFoundException;
 import com.streamhub.notification.dto.NotificationResponse;
 import com.streamhub.notification.entity.Notification;
 import com.streamhub.notification.repository.NotificationRepository;
+import com.streamhub.settings.entity.UserSettings;
+import com.streamhub.settings.service.UserSettingsService;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,24 +21,80 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final EntityManager entityManager;
+    private final UserSettingsService userSettingsService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
-    public NotificationService(NotificationRepository notificationRepository, EntityManager entityManager) {
+    public NotificationService(NotificationRepository notificationRepository, EntityManager entityManager, 
+                               @org.springframework.context.annotation.Lazy UserSettingsService userSettingsService,
+                               @org.springframework.beans.factory.annotation.Autowired(required = false) org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
         this.notificationRepository = notificationRepository;
         this.entityManager = entityManager;
+        this.userSettingsService = userSettingsService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Transactional
-    public void createNotification(UUID userId, String type, String title, String message, String relatedEntityType, UUID relatedEntityId) {
-        if (userId == null) return;
+    public NotificationResponse createNotification(UUID userId, String type, String title, String message, String relatedEntityType, UUID relatedEntityId) {
+        if (userId == null) return null;
         try {
+            UserSettings settings = userSettingsService.getOrCreate(userId);
+            boolean shouldCreate = true;
+
+            switch(type) {
+                case "LIKE":
+                case "COMMENT_LIKE":
+                case "COMMENT":
+                case "COMMENT_REPLY":
+                case "FOLLOW":
+                case "PLAYLIST_ADD":
+                case "VIDEO_UPLOAD":
+                case "VIDEO_DELETE":
+                    shouldCreate = settings.isNotifySocial();
+                    break;
+                case "MODERATION":
+                case "MODERATION_ACTION":
+                case "REPORT_SUBMITTED":
+                case "REPORT_STATUS_UPDATE":
+                case "REPORT_RESOLVED":
+                case "REPORT_UPDATE":
+                case "REPORT_ACTION":
+                    shouldCreate = settings.isNotifyModeration();
+                    break;
+                case "SYSTEM_ALERT":
+                default:
+                    shouldCreate = settings.isNotifySystem();
+                    break;
+            }
+
+            if (!shouldCreate) {
+                return null;
+            }
+
             //use entity reference proxy to avoid extra db query
             User userRef = entityManager.getReference(User.class, userId);
             String safeTitle = title != null ? (title.length() > 140 ? title.substring(0, 137) + "..." : title) : "Notification";
             String safeMessage = message != null ? (message.length() > 480 ? message.substring(0, 477) + "..." : message) : "";
             Notification notification = new Notification(userRef, type, safeTitle, safeMessage, relatedEntityType, relatedEntityId);
-            notificationRepository.save(notification);
+            Notification saved = notificationRepository.save(notification);
+            
+            NotificationResponse response = mapToResponse(saved);
+            
+            if (messagingTemplate != null && userRef.getUsername() != null) {
+                try {
+                    messagingTemplate.convertAndSendToUser(
+                            userRef.getUsername(),
+                            "/queue/notifications",
+                            response
+                    );
+                } catch (Exception e) {
+                    System.err.println("Failed to push STOMP notification: " + e.getMessage());
+                }
+            }
+            
+            return response;
         } catch (Exception e) {
             System.err.println("Failed to create notification for user " + userId + ": " + e.getMessage());
+            return null;
         }
     }
 

@@ -146,6 +146,16 @@ public class VideoController {
         }
     }
 
+    @GetMapping("/following")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<org.springframework.data.domain.Page<VideoResponseDTO>> getFollowingVideos(
+            org.springframework.data.domain.Pageable pageable,
+            Principal principal) {
+        User currentUser = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(videoService.getFollowingVideos(currentUser.getUserId(), pageable));
+    }
+
     //video library search and filter endpoint
     @GetMapping
     //searches and filters videos by category uploader or title
