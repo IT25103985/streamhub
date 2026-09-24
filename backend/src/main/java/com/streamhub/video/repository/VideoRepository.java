@@ -88,4 +88,9 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("UPDATE Video v SET v.category = null WHERE v.category.id = :categoryId")
     void setCategoryNullByCategoryId(@org.springframework.data.repository.query.Param("categoryId") UUID categoryId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Video v SET v.category.id = :newCategoryId WHERE v.category.id = :oldCategoryId")
+    //bulk-reassigns all videos from the deleted category to the fallback category
+    void reassignCategoryByCategoryId(@org.springframework.data.repository.query.Param("oldCategoryId") UUID oldCategoryId, @org.springframework.data.repository.query.Param("newCategoryId") UUID newCategoryId);
 }
