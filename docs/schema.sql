@@ -62,7 +62,6 @@ CREATE TABLE Video (
     thumbnail_url       NVARCHAR(255)     NOT NULL,
     duration_seconds    INT               NULL,
     privacy             NVARCHAR(10)      NOT NULL DEFAULT 'PUBLIC',
-    visibility          NVARCHAR(20)      NOT NULL DEFAULT 'PUBLIC',
     view_count          INT               NOT NULL DEFAULT 0,
     is_hidden           BIT               NOT NULL DEFAULT 0,
     created_at          DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -70,8 +69,7 @@ CREATE TABLE Video (
     CONSTRAINT FK_Video_Uploader FOREIGN KEY (uploader_id) REFERENCES [User](user_id),
     CONSTRAINT FK_Video_Category FOREIGN KEY (category_id) REFERENCES categories(id),
     CONSTRAINT CK_Video_Duration CHECK (duration_seconds IS NULL OR duration_seconds >= 0),
-    CONSTRAINT CK_Video_Privacy CHECK (privacy IN ('PUBLIC','PRIVATE')),
-    CONSTRAINT CK_Video_Visibility CHECK (visibility IN ('PUBLIC','PRIVATE','UNLISTED'))
+    CONSTRAINT CK_Video_Privacy CHECK (privacy IN ('PUBLIC','PRIVATE'))
 );
 GO
 CREATE INDEX IX_Video_Uploader ON Video(uploader_id);
@@ -324,6 +322,85 @@ CREATE TABLE Follow (
 );
 GO
 CREATE INDEX idx_follow_following_id ON Follow(following_id);
+GO
+
+-- ---------------------------------------------------------------------
+-- COMMENT_LIKE
+-- ---------------------------------------------------------------------
+CREATE TABLE CommentLike (
+    id          UNIQUEIDENTIFIER  NOT NULL PRIMARY KEY,
+    comment_id  UNIQUEIDENTIFIER  NOT NULL,
+    user_id     UNIQUEIDENTIFIER  NOT NULL,
+    created_at  DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_CommentLike_Comment FOREIGN KEY (comment_id) REFERENCES Comment(comment_id) ON DELETE CASCADE,
+    CONSTRAINT FK_CommentLike_User FOREIGN KEY (user_id) REFERENCES [User](user_id),
+    CONSTRAINT UQ_CommentLike_User_Comment UNIQUE (comment_id, user_id)
+);
+GO
+CREATE INDEX IX_CommentLike_Comment ON CommentLike(comment_id);
+CREATE INDEX IX_CommentLike_User ON CommentLike(user_id);
+GO
+
+-- ---------------------------------------------------------------------
+-- TRIGGERS
+-- ---------------------------------------------------------------------
+CREATE OR ALTER TRIGGER dbo.trg_DeleteVideo_Cleanup
+ON [dbo].[Video]
+INSTEAD OF DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Delete CommentLikes for all comments belonging to deleted videos
+    DELETE FROM [dbo].[CommentLike]
+    WHERE comment_id IN (
+        SELECT c.comment_id 
+        FROM [dbo].[Comment] c
+        INNER JOIN deleted d ON c.video_id = d.video_id
+    );
+
+    -- Delete Comments
+    DELETE FROM [dbo].[Comment]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+
+    -- Delete Watch History
+    DELETE FROM [dbo].[watch_history]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+
+    -- Delete Video View Events
+    DELETE FROM [dbo].[VideoViewEvent]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+
+    -- Delete Playlist Videos
+    DELETE FROM [dbo].[playlist_video]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+
+    -- Delete Likes & Dislikes
+    DELETE FROM [dbo].[Like]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+
+    DELETE FROM [dbo].[dislike]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+
+    -- Clean up polymorphic reports targeting the deleted videos
+    DELETE FROM [dbo].[report]
+    WHERE LOWER(reportable_type) = 'video' AND reportable_id IN (SELECT video_id FROM deleted);
+
+    -- Clean up notifications related to the deleted videos
+    DELETE FROM [dbo].[notification]
+    WHERE related_entity_type = 'VIDEO' AND related_entity_id IN (SELECT video_id FROM deleted);
+
+    -- Audit trail in SyncLog
+    INSERT INTO [dbo].[SyncLog] ([file_name], [applied_at])
+    SELECT
+        'VIDEO_DELETED:' + CAST(video_id AS NVARCHAR(36)),
+        SYSDATETIME()
+    FROM deleted;
+
+    -- Finally, physically delete the Video record
+    DELETE FROM [dbo].[Video]
+    WHERE video_id IN (SELECT video_id FROM deleted);
+END;
 GO
 
 

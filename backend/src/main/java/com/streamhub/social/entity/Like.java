@@ -21,11 +21,11 @@ public class Like {
     private UUID likeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_id", nullable = false)
+    @JoinColumn(name = "video_id", nullable = false, foreignKey = @ForeignKey(name = "FK_Like_Video"))
     private Video video;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "FK_Like_User"))
     private User user;
 
     @CreationTimestamp

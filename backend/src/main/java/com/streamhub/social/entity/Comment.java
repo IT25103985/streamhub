@@ -20,11 +20,11 @@ public class Comment {
     private UUID commentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_id", nullable = false)
+    @JoinColumn(name = "video_id", nullable = false, foreignKey = @ForeignKey(name = "FK_Comment_Video"))
     private Video video;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "FK_Comment_User"))
     private User author;
 
     @Column(name = "content", nullable = false, columnDefinition = "NVARCHAR(2000)")
@@ -42,7 +42,7 @@ public class Comment {
     private boolean isHidden = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_comment_id")
+    @JoinColumn(name = "parent_comment_id", foreignKey = @ForeignKey(name = "FK_Comment_Parent"))
     private Comment parentComment;
 
     @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -24,7 +24,7 @@ public class Playlist {
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "owner_id", nullable = false, foreignKey = @ForeignKey(name = "FK_Playlist_Owner"))
     private User owner;
 
     @Column(name = "privacy", nullable = false, length = 10)
