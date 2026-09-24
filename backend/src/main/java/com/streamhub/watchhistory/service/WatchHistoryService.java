@@ -8,6 +8,7 @@ import com.streamhub.video.repository.VideoRepository;
 import com.streamhub.watchhistory.dto.WatchHistoryResponseDTO;
 import com.streamhub.watchhistory.entity.WatchHistory;
 import com.streamhub.watchhistory.repository.WatchHistoryRepository;
+import com.streamhub.settings.service.UserSettingsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,21 +32,32 @@ public class WatchHistoryService {
     private final PreferredCategoryStrategy preferredCategoryStrategy;
     private final TrendingFallbackStrategy trendingFallbackStrategy;
 
+    private final UserSettingsService userSettingsService;
+
     public WatchHistoryService(WatchHistoryRepository watchHistoryRepository,
                                VideoRepository videoRepository,
                                CategoryAffinityStrategy categoryAffinityStrategy,
                                PreferredCategoryStrategy preferredCategoryStrategy,
-                               TrendingFallbackStrategy trendingFallbackStrategy) {
+                               TrendingFallbackStrategy trendingFallbackStrategy,
+                               UserSettingsService userSettingsService) {
         this.watchHistoryRepository = watchHistoryRepository;
         this.videoRepository = videoRepository;
         this.categoryAffinityStrategy = categoryAffinityStrategy;
         this.preferredCategoryStrategy = preferredCategoryStrategy;
         this.trendingFallbackStrategy = trendingFallbackStrategy;
+        this.userSettingsService = userSettingsService;
     }
 
     @Transactional
     //watch history tracking logic
     public void recordWatchHistory(User user, UUID videoId, Integer positionSeconds) {
+        if (user != null) {
+            com.streamhub.settings.entity.UserSettings settings = userSettingsService.getOrCreate(user.getUserId());
+            if (!settings.isWatchHistoryEnabled()) {
+                return;
+            }
+        }
+        
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Video not found with id " + videoId));
 

@@ -1,0 +1,121 @@
+.follow-button-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+}
+
+.follow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  position: relative;
+  outline: none;
+}
+
+.follow-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.follow-btn-sm {
+  font-size: 0.8125rem;
+  padding: 5px 14px;
+  height: 30px;
+}
+
+.follow-btn-md {
+  font-size: 0.875rem;
+  padding: 7px 18px;
+  height: 36px;
+}
+
+.follow-btn-lg {
+  font-size: 0.9375rem;
+  padding: 9px 22px;
+  height: 42px;
+}
+
+/* Unfollowed / Follow action state */
+.follow-btn.not-following {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(91, 95, 239, 0.3);
+}
+
+.follow-btn.not-following:hover:not(:disabled) {
+  background: var(--accent-hover, var(--accent-light, #7377f1));
+  box-shadow: 0 4px 14px rgba(91, 95, 239, 0.45);
+  transform: translateY(-1px);
+}
+
+.follow-btn.not-following:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Following state */
+.follow-btn.is-following {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.follow-btn.is-following:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.follow-btn.is-following:hover:not(:disabled) .follow-btn-text::before {
+  content: 'Unfollow';
+}
+
+.follow-btn.is-following:hover:not(:disabled) .follow-btn-text span {
+  display: none;
+}
+
+.follow-btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: followBtnSpin 0.7s linear infinite;
+}
+
+@keyframes followBtnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.follow-btn-error {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #f87171;
+  background: rgba(20, 10, 15, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -309,3 +309,21 @@ GO
 CREATE INDEX IX_HelpTopic_Section_DisplayOrder ON HelpTopic(section, display_order);
 GO
 
+-- ---------------------------------------------------------------------
+-- FOLLOW
+-- ---------------------------------------------------------------------
+CREATE TABLE Follow (
+    id              UNIQUEIDENTIFIER  NOT NULL PRIMARY KEY DEFAULT NEWID(),
+    follower_id     UNIQUEIDENTIFIER  NOT NULL,
+    following_id    UNIQUEIDENTIFIER  NOT NULL,
+    created_at      DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT fk_follow_follower FOREIGN KEY (follower_id) REFERENCES [User](user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_follow_following FOREIGN KEY (following_id) REFERENCES [User](user_id) ON DELETE NO ACTION,
+    CONSTRAINT uq_follow_pair UNIQUE (follower_id, following_id),
+    CONSTRAINT ck_follow_no_self CHECK (follower_id <> following_id)
+);
+GO
+CREATE INDEX idx_follow_following_id ON Follow(following_id);
+GO
+
+

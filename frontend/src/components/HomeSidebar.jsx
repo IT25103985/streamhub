@@ -10,6 +10,8 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
   const { user, logout, openAuthModal } = useContext(AuthContext);
   const [playlists, setPlaylists] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const [followingData, setFollowingData] = useState(null);
+  const [followingExpanded, setFollowingExpanded] = useState(false);
   const navigate = useNavigate();
 
   const fetchPlaylists = () => {
@@ -26,6 +28,16 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
         setPlaylists([]);
       });
   };
+
+  useEffect(() => {
+    if (user) {
+      axiosInstance.get('/follows/me/sidebar')
+        .then(res => setFollowingData(res.data))
+        .catch(err => console.error("Failed to fetch sidebar following", err));
+    } else {
+      setFollowingData(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchPlaylists();
@@ -49,7 +61,8 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
     link: `/playlist/${p?.playlistId || p?.id}`
   })) : [];
 
-  const visibleItems = Array.isArray(displayList) ? (expanded ? displayList : displayList.slice(0, 5)) : [];
+  const visibleItems = Array.isArray(displayList) ? (expanded ? displayList : displayList.slice(0, 4)) : [];
+  const visibleFollowing = followingData ? (followingExpanded ? followingData.topFollowed : followingData.topFollowed.slice(0, 3)) : [];
 
   const handleLogout = async () => {
     await logout();
@@ -89,45 +102,44 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
           </NavLink>
         </nav>
 
-        {user && recommendedVideos && recommendedVideos.length > 0 && (
+        {user && followingData && followingData.totalFollowing > 0 && (
           <>
             <div className="sidebar-divider" />
             <div className="sidebar-section">
               <div className="sidebar-section-title">
-                <span>Recommended for you</span>
+                <span>Following</span>
               </div>
-              <div className="sidebar-rec-list">
-                {recommendedVideos.slice(0, 3).map((v) => {
-                  const vidId = v.videoId || v.id;
-                  const thumb = v.thumbnailUrl ? getFullImageUrl(v.thumbnailUrl) : null;
-                  const title = v.title || 'Untitled Video';
-                  const creator = v.uploaderName || v.uploaderUsername || v.ownerUsername || 'Creator';
-                  const views = typeof v.viewCount === 'number'
-                    ? new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(v.viewCount)
-                    : (v.viewCount || '0');
-
-                  return (
-                    <div 
-                      key={`side-rec-${vidId}`} 
-                      className="sidebar-rec-item"
-                      onClick={() => onSelectVideo && onSelectVideo(vidId)}
-                    >
-                      <div className="sidebar-rec-thumb">
-                        {thumb ? (
-                          <img src={thumb} alt={title} />
-                        ) : (
-                          <div className="sidebar-rec-fallback" />
-                        )}
-                        {v.duration && <span className="sidebar-rec-duration">{v.duration}</span>}
-                      </div>
-                      <div className="sidebar-rec-info">
-                        <div className="sidebar-rec-title" title={title}>{title}</div>
-                        <div className="sidebar-rec-meta">{creator} • {views} views</div>
-                      </div>
+              <div className={`sidebar-playlist-list ${followingExpanded ? 'scrollable-list' : ''}`}>
+                {visibleFollowing.map(f => (
+                  <Link 
+                    key={f.userId} 
+                    to={`/profile/${f.userId}`} 
+                    className="sidebar-playlist-item"
+                  >
+                    <div className="sidebar-playlist-avatar">
+                      {f.avatarUrl ? (
+                        <img src={getFullImageUrl(f.avatarUrl)} alt={f.displayName} />
+                      ) : (
+                        <span>{f.displayName ? f.displayName[0].toUpperCase() : 'U'}</span>
+                      )}
                     </div>
-                  );
-                })}
+                    <span className="sidebar-playlist-name">{f.displayName}</span>
+                  </Link>
+                ))}
               </div>
+              {followingData.topFollowed.length > 3 && (
+                <button 
+                  className="sidebar-load-more-btn"
+                  onClick={() => setFollowingExpanded(!followingExpanded)}
+                >
+                  <div className="load-more-icon-circle" style={{ background: 'var(--surface-3)', color: 'var(--text-dim)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: followingExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </div>
+                  <span>{followingExpanded ? 'Show less' : 'See more'}</span>
+                </button>
+              )}
             </div>
           </>
         )}
@@ -139,7 +151,7 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
             <span>Playlist</span>
           </div>
 
-          <div className="sidebar-playlist-list">
+          <div className={`sidebar-playlist-list ${expanded ? 'scrollable-list' : ''}`}>
             {displayList.length > 0 ? (
               visibleItems.map((item, idx) => (
                 <Link 
@@ -187,7 +199,7 @@ const HomeSidebar = ({ recommendedVideos = [], onSelectVideo }) => {
             )}
           </div>
 
-          {displayList.length > 5 && (
+          {displayList.length > 4 && (
             <button 
               className="sidebar-load-more-btn"
               onClick={() => setExpanded(!expanded)}

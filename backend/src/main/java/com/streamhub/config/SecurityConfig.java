@@ -49,6 +49,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout", "/api/auth/register", "/api/auth/login").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/videos", "/api/v1/videos/**", "/api/videos", "/api/videos/**", "/api/v1/video").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/videos/*/view").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
@@ -56,7 +57,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/playlists", "/api/v1/playlists/**", "/api/playlists", "/api/playlists/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/comments", "/api/v1/likes/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/help/**", "/api/help/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/users/avatar/**", "/api/v1/users/cover/**", "/api/v1/users/*/profile").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users/avatar/**", "/api/v1/users/cover/**", "/api/v1/users/*/profile", "/api/v1/follows/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/watch-history/trending", "/api/watch-history/trending").permitAll()
                 .requestMatchers("/api/v1/admin/users/**", "/api/admin/users/**").hasRole("ADMINISTRATOR")
                 .requestMatchers("/api/v1/admin/analytics/**", "/api/admin/analytics/**").hasRole("ADMINISTRATOR")

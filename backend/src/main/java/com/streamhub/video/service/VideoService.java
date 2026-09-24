@@ -284,6 +284,10 @@ public class VideoService {
         }
     }
 
+    public org.springframework.data.domain.Page<VideoResponseDTO> getFollowingVideos(UUID followerId, org.springframework.data.domain.Pageable pageable) {
+        return videoRepository.findVideosFromFollowedUsers(followerId, pageable).map(this::mapToDTO);
+    }
+
     public org.springframework.data.domain.Page<VideoResponseDTO> getAllVideos(UUID uploaderId, String search, UUID categoryId, org.springframework.data.domain.Pageable pageable) {
         return getAllVideos(uploaderId, search, categoryId, pageable, null, false);
     }

@@ -27,6 +27,9 @@ const CommentItem = ({
 
   const [isReplying, setIsReplying] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
+  
+  const [likeCount, setLikeCount] = useState(comment.likeCount || 0);
+  const [isLiked, setIsLiked] = useState(comment.isLikedByMe || false);
 
   const isAuthor = user && (user.userId === comment.authorId || user.username === comment.authorUsername);
   const visibleReplies = (comment.replies || []).filter(r => !r.isHidden && !r.hidden);
@@ -67,6 +70,33 @@ const CommentItem = ({
     } finally {
       setDeleteLoading(false);
     }
+  };
+
+  const handleLikeToggle = () => {
+    requireAuth(async () => {
+      // optimistic update
+      const prevLiked = isLiked;
+      const prevCount = likeCount;
+      
+      const newLiked = !isLiked;
+      setIsLiked(newLiked);
+      setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+      
+      try {
+        const status = await socialService.toggleCommentLike(comment.commentId);
+        setIsLiked(status.userLiked);
+        setLikeCount(status.likeCount);
+      } catch (err) {
+        console.error('Failed to toggle comment like', err);
+        setIsLiked(prevLiked);
+        setLikeCount(prevCount);
+      }
+    });
+  };
+
+  const formatCount = (count) => {
+    if (!count) return '';
+    return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(count);
   };
 
   //comment thread card section
@@ -155,7 +185,33 @@ const CommentItem = ({
 
         
         {!isDeleting && !isEditing && (
-          <div className="comment-actions-bar">
+          <div className="comment-actions-bar" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {user && (
+              <button 
+                className={`btn-comment-like ${isLiked ? 'active' : ''}`}
+                onClick={handleLikeToggle}
+                aria-label={isLiked ? "Unlike comment" : "Like comment"}
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', 
+                  color: isLiked ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', padding: '4px' 
+                }}
+              >
+                <svg 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 24 24" 
+                  fill={isLiked ? "currentColor" : "none"} 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                </svg>
+                {likeCount > 0 && <span style={{ fontSize: '0.85rem' }}>{formatCount(likeCount)}</span>}
+              </button>
+            )}
+            
             <button 
               className="btn-reply-text" 
               onClick={() => requireAuth(() => setIsReplying(!isReplying))}

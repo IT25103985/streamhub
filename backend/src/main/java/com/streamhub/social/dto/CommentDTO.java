@@ -20,6 +20,9 @@ public class CommentDTO {
     private java.util.List<CommentDTO> replies;
     @JsonProperty("isHidden")
     private boolean isHidden;
+    private int likeCount;
+    @JsonProperty("isLikedByMe")
+    private boolean isLikedByMe;
 
     public CommentDTO() {}
 
@@ -100,5 +103,11 @@ public class CommentDTO {
 
     public boolean isHidden() { return isHidden; }
     public void setHidden(boolean hidden) { this.isHidden = hidden; }
+
+    public int getLikeCount() { return likeCount; }
+    public void setLikeCount(int likeCount) { this.likeCount = likeCount; }
+
+    public boolean isLikedByMe() { return isLikedByMe; }
+    public void setLikedByMe(boolean likedByMe) { this.isLikedByMe = likedByMe; }
 }
 

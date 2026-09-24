@@ -58,6 +58,9 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
     org.springframework.data.domain.Page<Video> findByOwner_UserIdAndCategory_IdAndTitleContainingIgnoreCase(UUID ownerId, UUID categoryId, String title, Pageable pageable);
     org.springframework.data.domain.Page<Video> findByOwner_UserIdAndCategory_IdAndTitleContainingIgnoreCaseAndIsHiddenFalse(UUID ownerId, UUID categoryId, String title, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.Query("SELECT v FROM Video v JOIN Follow f ON v.owner.userId = f.following.userId WHERE f.follower.userId = :followerId AND (v.isHidden = false OR v.isHidden IS NULL) AND (UPPER(v.privacy) = 'PUBLIC' OR v.privacy IS NULL) ORDER BY v.createdAt DESC")
+    org.springframework.data.domain.Page<Video> findVideosFromFollowedUsers(@org.springframework.data.repository.query.Param("followerId") UUID followerId, Pageable pageable);
+
     @org.springframework.data.jpa.repository.Query("SELECT v FROM Video v WHERE (v.isHidden = false OR v.isHidden IS NULL) AND (UPPER(v.privacy) = 'PUBLIC' OR v.privacy IS NULL)")
     org.springframework.data.domain.Page<Video> findPublicVideos(Pageable pageable);
 

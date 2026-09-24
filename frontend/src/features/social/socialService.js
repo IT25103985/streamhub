@@ -23,6 +23,10 @@ const socialService = {
     const response = await axiosInstance.post(`/videos/${videoId}/like`);
     return response.data;
   },
+  toggleCommentLike: async (commentId) => {
+    const response = await axiosInstance.post(`/comments/${commentId}/like`);
+    return response.data;
+  },
   getLikeStatus: async (videoId) => {
     const response = await axiosInstance.get(`/videos/${videoId}/like-status`);
     return response.data;

@@ -65,10 +65,13 @@ public class WatchHistoryRecommendationTest {
 
     @BeforeEach
     public void setup() {
+        com.streamhub.settings.service.UserSettingsService userSettingsService = org.mockito.Mockito.mock(com.streamhub.settings.service.UserSettingsService.class);
+        org.mockito.Mockito.when(userSettingsService.getOrCreate(org.mockito.ArgumentMatchers.any())).thenReturn(new com.streamhub.settings.entity.UserSettings());
+
         trendingFallbackStrategy = new TrendingFallbackStrategy(videoViewEventRepository, videoRepository);
         preferredCategoryStrategy = new PreferredCategoryStrategy(userCategoryPreferenceRepository, videoRepository, trendingFallbackStrategy);
         categoryAffinityStrategy = new CategoryAffinityStrategy(watchHistoryRepository, videoRepository);
-        watchHistoryService = new WatchHistoryService(watchHistoryRepository, videoRepository, categoryAffinityStrategy, preferredCategoryStrategy, trendingFallbackStrategy);
+        watchHistoryService = new WatchHistoryService(watchHistoryRepository, videoRepository, categoryAffinityStrategy, preferredCategoryStrategy, trendingFallbackStrategy, userSettingsService);
         watchHistoryController = new WatchHistoryController(watchHistoryService, userRepository);
 
         testUser = new User();

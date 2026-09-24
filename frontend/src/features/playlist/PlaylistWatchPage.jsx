@@ -13,6 +13,31 @@ import { AuthContext, useRequireAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axiosInstance';
 import '../video/VideoWatchPanel.css';
 
+const renderDescriptionWithLinks = (text) => {
+  if (!text) return 'No description provided.';
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a 
+          key={i} 
+          href={part} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onClick={(e) => e.stopPropagation()}
+          style={{ color: 'var(--accent-light, #818cf8)', textDecoration: 'none' }}
+          onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+          onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 //dedicated playback view that automatically advances through playlist queue
 const PlaylistWatchPage = () => {
     const { id } = useParams();
@@ -174,7 +199,7 @@ const PlaylistWatchPage = () => {
                                             overflow: 'hidden'
                                         })
                                     }}>
-                                        {videoDetails.description || 'No description.'}
+                                        {renderDescriptionWithLinks(videoDetails.description)}
                                     </div>
                                     <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: 'bold' }}>
                                         {isDescriptionExpanded ? 'Show less' : '...more'}

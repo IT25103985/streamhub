@@ -83,9 +83,15 @@ const HomePage = () => {
       const currentPage = isRefresh ? 0 : page;
       const params = { page: 0, size: PAGE_SIZE * (currentPage + 1) };
       if (query) params.search = query;
-      if (categoryId) params.categoryId = categoryId;
 
-      const res = await axiosInstance.get('/videos', { params });
+      let res;
+      if (categoryId === 'following') {
+        res = await axiosInstance.get('/videos/following', { params });
+      } else {
+        if (categoryId) params.categoryId = categoryId;
+        res = await axiosInstance.get('/videos', { params });
+      }
+
       const newVideos = res.data.content || res.data || [];
       const isLast = res.data.last !== undefined ? res.data.last : newVideos.length < (PAGE_SIZE * (currentPage + 1));
 
@@ -106,7 +112,7 @@ const HomePage = () => {
       const currentPage = isRefresh ? 0 : page;
       const params = { page: 0, size: PAGE_SIZE * (currentPage + 1) };
       if (query) params.query = query;
-      if (categoryId) params.categoryId = categoryId;
+      if (categoryId && categoryId !== 'following') params.categoryId = categoryId;
 
       const res = await playlistService.searchPlaylists(params);
       const newPlaylists = res.content || res || [];
@@ -251,7 +257,13 @@ const HomePage = () => {
                       />
                     ))
                   ) : (
-                    !loading && <div className="empty-state">No videos found</div>
+                    !loading && (
+                      <div className="empty-state">
+                        {categoryId === 'following'
+                          ? "You are not following anyone yet, or they haven't uploaded any videos. Explore and follow creators you love!"
+                          : "No videos found"}
+                      </div>
+                    )
                   )}
                   {loading && libraryVideos.length > 0 && (
                     Array.from({ length: 4 }).map((_, i) => (

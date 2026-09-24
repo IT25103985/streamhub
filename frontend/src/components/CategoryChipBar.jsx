@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import axiosInstance from '../api/axiosInstance';
+import { AuthContext } from '../context/AuthContext';
 import Chip from './Chip';
 
 //pill selector bar for filtering video feed by category
 const CategoryChipBar = ({ selectedCategoryId, onCategoryChange }) => {
+    const { user } = useContext(AuthContext);
     const [categories, setCategories] = useState([]);
     const [isLocked, setIsLocked] = useState(false);
     const barRef = useRef(null);
@@ -37,6 +39,14 @@ const CategoryChipBar = ({ selectedCategoryId, onCategoryChange }) => {
                     filter="all" 
                     label="All" 
                 />
+                {user && (
+                    <Chip 
+                        active={currentFilter === 'following'} 
+                        onClick={() => onCategoryChange('following')} 
+                        filter="following" 
+                        label="Following" 
+                    />
+                )}
                 {categories.map(cat => (
                     <Chip 
                         key={cat.id} 

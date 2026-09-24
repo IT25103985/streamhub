@@ -18,7 +18,7 @@ const ProfilePlaylistsTab = ({ ownerId = 'me', search = '' }) => {
         try {
             const data = ownerId === 'me' 
                 ? await playlistService.getUserPlaylists(true, search)
-                : await playlistService.getPlaylistsByOwner(ownerId, true);
+                : await playlistService.getPlaylistsByOwner(ownerId, true, search);
             setPlaylists(data || []);
         } catch (err) {
             console.error("Failed to fetch playlists", err);
