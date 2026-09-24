@@ -77,11 +77,26 @@ public class CategoryService {
     }
 
     @Transactional
+    //reassigns videos from the deleted category to "Other" before removing the category
     public void deleteCategory(UUID id) {
-        if (!categoryRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Category not found with id: " + id);
+        Category categoryToDelete = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
+
+        // Prevent deleting the fallback "Other" category to preserve the invariant
+        if (categoryToDelete.getName().equalsIgnoreCase("Other")) {
+            throw new IllegalArgumentException("The 'Other' category cannot be deleted as it is used as a fallback for videos.");
         }
-        videoRepository.setCategoryNullByCategoryId(id);
+
+        // Find or create the "Other" fallback category
+        Category otherCategory = categoryRepository.findByNameIgnoreCase("Other")
+                .orElseGet(() -> {
+                    Category newOther = new Category("Other", "Default category for uncategorized videos");
+                    return categoryRepository.save(newOther);
+                });
+
+        // Bulk-reassign all videos from the deleted category to "Other"
+        videoRepository.reassignCategoryByCategoryId(id, otherCategory.getId());
+
         categoryRepository.deleteById(id);
     }
 
