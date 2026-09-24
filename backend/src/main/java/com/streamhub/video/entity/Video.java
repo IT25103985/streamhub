@@ -35,11 +35,11 @@ public class Video {
     private String thumbnailUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploader_id", nullable = false)
+    @JoinColumn(name = "uploader_id", nullable = false, foreignKey = @ForeignKey(name = "FK_Video_Uploader"))
     private User owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", foreignKey = @ForeignKey(name = "FK_Video_Category"))
     private com.streamhub.category.entity.Category category;
 
     @Column(name = "view_count", nullable = false)
