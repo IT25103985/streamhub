@@ -509,15 +509,30 @@ public class VideoService {
                 .setParameter("id", videoId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM playlist_video WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM [Comment] WHERE video_id = :id AND parent_comment_id IS NOT NULL")
+
+            // Delete CommentLike rows first — they reference comment_id, so comments
+            // cannot be deleted while any likes on them still exist (FK violation)
+            entityManager.createNativeQuery(
+                    "DELETE FROM [CommentLike] WHERE comment_id IN " +
+                    "(SELECT comment_id FROM [Comment] WHERE video_id = :id)")
                 .setParameter("id", videoId).executeUpdate();
+
+            // Delete reply comments before parent comments — replies reference
+            // parent_comment_id which points back to the same Comment table (self FK)
+            entityManager.createNativeQuery(
+                    "DELETE FROM [Comment] WHERE video_id = :id AND parent_comment_id IS NOT NULL")
+                .setParameter("id", videoId).executeUpdate();
+
+            // Now it is safe to delete top-level comments
             entityManager.createNativeQuery("DELETE FROM [Comment] WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
+
             entityManager.createNativeQuery("DELETE FROM [Like] WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
             entityManager.createNativeQuery("DELETE FROM [dislike] WHERE video_id = :id")
                 .setParameter("id", videoId).executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM [notification] WHERE related_entity_type = 'VIDEO' AND related_entity_id = :id")
+            entityManager.createNativeQuery(
+                    "DELETE FROM [notification] WHERE related_entity_type = 'VIDEO' AND related_entity_id = :id")
                 .setParameter("id", videoId).executeUpdate();
             entityManager.flush();
         } catch (Exception e) {

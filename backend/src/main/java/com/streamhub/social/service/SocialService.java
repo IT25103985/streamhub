@@ -187,7 +187,7 @@ public class SocialService {
             throw new RuntimeException("Unauthorized: You can only delete your own comments");
         }
 
-        commentRepository.delete(comment);
+        deleteCommentSafely(comment);
     }
 
     @Transactional
@@ -195,6 +195,22 @@ public class SocialService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
 
+        deleteCommentSafely(comment);
+    }
+
+    // Deletes a comment and cleans up CommentLike rows first.
+    // CommentLike has no cascade so we must remove likes manually before
+    // deleting the comment or any of its replies, otherwise SQL throws a FK violation.
+    private void deleteCommentSafely(Comment comment) {
+        // Remove likes on every reply first
+        if (comment.getReplies() != null) {
+            for (Comment reply : comment.getReplies()) {
+                commentLikeRepository.deleteAllByComment(reply);
+            }
+        }
+        // Remove likes on the comment itself
+        commentLikeRepository.deleteAllByComment(comment);
+        // Now it is safe to delete — Hibernate cascades the reply rows via CascadeType.ALL
         commentRepository.delete(comment);
     }
 

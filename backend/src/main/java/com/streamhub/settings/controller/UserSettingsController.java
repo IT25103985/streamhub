@@ -53,4 +53,14 @@ public class UserSettingsController {
         watchHistoryService.clearUserHistory(user);
         return ResponseEntity.noContent().build();
     }
+
+    // Permanently deletes the account and every piece of data owned by it.
+    // The frontend should log the user out immediately after this returns 204.
+    @DeleteMapping("/account")
+    public ResponseEntity<Void> deleteAccount(Principal principal) {
+        User user = getCurrentUser(principal);
+        userSettingsService.deleteAccount(user.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }
+
