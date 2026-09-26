@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 //side navigation bar linking to admin management sections
 const AdminSidebar = ({ role }) => {
@@ -98,19 +98,6 @@ const AdminSidebar = ({ role }) => {
 
   return (
     <aside className="admin-sidebar">
-      <div className="admin-sidebar-header">
-        <Link 
-          to="/" 
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('streamhub-reset-home'));
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }} 
-          className="logo" 
-          style={{ fontSize: '19px' }}
-        >
-          Stream<span>Hub</span>
-        </Link>
-      </div>
       <nav className="admin-sidebar-nav">
         {links.map((link) => (
           <NavLink 
