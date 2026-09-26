@@ -14,4 +14,6 @@ public interface CommentLikeRepository extends JpaRepository<CommentLike, UUID> 
     Optional<CommentLike> findByCommentAndUser(Comment comment, User user);
     int countByComment(Comment comment);
     boolean existsByCommentAndUser(Comment comment, User user);
+    // used before deleting a comment so CommentLike FK does not block the delete
+    void deleteAllByComment(Comment comment);
 }
