@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "Follow")
-//database entity representing a follower-following relationship between two users
+//database entity representing a follower and following relationship between two users
 public class Follow {
 
     @Id

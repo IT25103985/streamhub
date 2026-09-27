@@ -191,6 +191,7 @@ public class VideoService {
         }
     }
 
+    //replaces video thumbnail file with a newly uploaded image
     public VideoResponseDTO replaceThumbnail(UUID videoId, MultipartFile thumbnail, User currentUser) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("Video not found"));
@@ -284,6 +285,7 @@ public class VideoService {
         }
     }
 
+    //retrieves page of videos uploaded by creators the user follows
     public org.springframework.data.domain.Page<VideoResponseDTO> getFollowingVideos(UUID followerId, org.springframework.data.domain.Pageable pageable) {
         return videoRepository.findVideosFromFollowedUsers(followerId, pageable).map(this::mapToDTO);
     }
@@ -387,6 +389,7 @@ public class VideoService {
         return videoPage.map(this::mapToDTO);
     }
 
+    //fetches detailed video information if the user is authorized
     public VideoResponseDTO getVideoDetails(UUID videoId) {
         return getVideoDetails(videoId, null);
     }
@@ -402,6 +405,7 @@ public class VideoService {
         return mapToDTO(video);
     }
 
+    //switches hidden state and adjusts privacy between public and private
     @Transactional
     public VideoResponseDTO toggleVideoHidden(UUID videoId) {
         Video video = videoRepository.findById(videoId)
@@ -417,6 +421,7 @@ public class VideoService {
         return mapToDTO(saved);
     }
 
+    //updates editable metadata fields including title description category and privacy
     public VideoResponseDTO updateVideo(UUID videoId, String title, String description, UUID categoryId, User currentUser) {
         return updateVideo(videoId, title, description, categoryId, null, currentUser);
     }
@@ -451,6 +456,7 @@ public class VideoService {
         return mapToDTO(savedVideo);
     }
 
+    //initiates video deletion if the requesting user is the owner
     @Transactional
     public void deleteVideo(UUID videoId, User currentUser) {
         Video video = videoRepository.findById(videoId)
@@ -469,6 +475,7 @@ public class VideoService {
         moderateDeleteVideo(videoId, "Violation of platform policies", null);
     }
 
+    //deletes video administratively and records moderation reason
     @Transactional
     public void moderateDeleteVideo(UUID videoId, String reason, User moderator) {
         Video video = videoRepository.findById(videoId)
@@ -477,6 +484,7 @@ public class VideoService {
         deleteVideoInternal(video, reason, moderator);
     }
 
+    //cascades physical file cleanup and database row deletion across all dependent tables
     @Transactional
     public void deleteVideoInternal(Video video, String reason, User moderator) {
         if (video == null) return;
@@ -583,6 +591,7 @@ public class VideoService {
         }
     }
 
+    //cleans up missing video files and resolves residual moderated entries on startup
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     @Transactional
     public void cleanupOrphanedAndModeratedVideos() {
@@ -620,6 +629,7 @@ public class VideoService {
         }
     }
 
+    //records watch event and increments total view count for a video
     @Transactional
     public void incrementViewCount(UUID videoId, User user) {
         Video video = videoRepository.findById(videoId)
@@ -696,6 +706,7 @@ public class VideoService {
         return dto;
     }
 
+    //counts total number of video records in the database
     public long countAll() {
         return videoRepository.count();
     }

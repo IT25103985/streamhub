@@ -16,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/settings")
 @PreAuthorize("isAuthenticated()")
+//controller managing personal preferences playback settings and account deletion
 public class UserSettingsController {
 
     private final UserSettingsService userSettingsService;
@@ -28,11 +29,13 @@ public class UserSettingsController {
         this.userRepository = userRepository;
     }
 
+    //retrieves authenticated user entity from security principal
     private User getCurrentUser(Principal principal) {
         return userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    //retrieves or initializes user settings profile
     @GetMapping
     public ResponseEntity<UserSettingsDTO> getSettings(Principal principal) {
         User user = getCurrentUser(principal);
@@ -40,6 +43,7 @@ public class UserSettingsController {
         return ResponseEntity.ok(new UserSettingsDTO(settings));
     }
 
+    //updates user notification and playback settings
     @PutMapping
     public ResponseEntity<UserSettingsDTO> updateSettings(Principal principal, @RequestBody Map<String, Boolean> updates) {
         User user = getCurrentUser(principal);
@@ -47,6 +51,7 @@ public class UserSettingsController {
         return ResponseEntity.ok(new UserSettingsDTO(settings));
     }
 
+    //clears watch history records for the authenticated user
     @PostMapping("/watch-history/clear")
     public ResponseEntity<Void> clearWatchHistory(Principal principal) {
         User user = getCurrentUser(principal);
@@ -54,8 +59,7 @@ public class UserSettingsController {
         return ResponseEntity.noContent().build();
     }
 
-    // Permanently deletes the account and every piece of data owned by it.
-    // The frontend should log the user out immediately after this returns 204.
+    //permanently deletes account and associated user data
     @DeleteMapping("/account")
     public ResponseEntity<Void> deleteAccount(Principal principal) {
         User user = getCurrentUser(principal);

@@ -71,6 +71,7 @@ public class WatchHistoryService {
         watchHistoryRepository.save(watchHistory);
     }
 
+    //retrieves stored playback timestamp in seconds for a specific video
     @Transactional(readOnly = true)
     public int getResumePosition(User user, UUID videoId) {
         if (user == null || videoId == null) {
@@ -81,6 +82,7 @@ public class WatchHistoryService {
                 .orElse(0);
     }
 
+    //retrieves page of user watch history ordered by most recent
     @Transactional(readOnly = true)
     public Page<WatchHistoryResponseDTO> getUserWatchHistory(User user, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -89,6 +91,7 @@ public class WatchHistoryService {
         return historyPage.map(this::mapToResponseDTO);
     }
 
+    //deletes all playback history entries for user
     @Transactional
     public void clearUserHistory(User user) {
         if (user != null) {
@@ -96,6 +99,7 @@ public class WatchHistoryService {
         }
     }
 
+    //deletes single video entry from user watch history
     @Transactional
     public void deleteSingleHistory(User user, UUID videoId) {
         if (user != null && videoId != null) {

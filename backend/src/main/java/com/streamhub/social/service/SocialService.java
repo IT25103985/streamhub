@@ -140,6 +140,7 @@ public class SocialService {
         return mapToCommentDTO(saved, user);
     }
 
+    //retrieves page of top level comments and replies for video
     @Transactional(readOnly = true)
     public Page<CommentDTO> getPaginatedComments(UUID videoId, int page, int size) {
         return getPaginatedComments(videoId, page, size, null);
@@ -159,6 +160,7 @@ public class SocialService {
                 .map(comment -> mapToCommentDTO(comment, user));
     }
 
+    //fetches all top level comments with replies for a video
     @Transactional(readOnly = true)
     public List<CommentDTO> getCommentsByVideo(UUID videoId) {
         return getCommentsByVideo(videoId, null);
@@ -178,6 +180,7 @@ public class SocialService {
                 .collect(Collectors.toList());
     }
 
+    //deletes comment after checking user ownership
     @Transactional
     public void deleteComment(UUID commentId, User user) {
         Comment comment = commentRepository.findById(commentId)
@@ -190,6 +193,7 @@ public class SocialService {
         deleteCommentSafely(comment);
     }
 
+    //administratively removes comment and associated likes
     @Transactional
     public void moderateDeleteComment(UUID commentId) {
         Comment comment = commentRepository.findById(commentId)
@@ -214,6 +218,7 @@ public class SocialService {
         commentRepository.delete(comment);
     }
 
+    //retrieves all comments across platform for moderation review
     @Transactional(readOnly = true)
     public List<CommentDTO> getAllCommentsForAdmin() {
         return commentRepository.findAll().stream()
@@ -297,6 +302,7 @@ public class SocialService {
         return new LikeStatusDTO(likeCount, userLiked, dislikeCount, userDisliked);
     }
 
+    //retrieves like and dislike totals and current user state for video
     @Transactional(readOnly = true)
     public LikeStatusDTO getLikeStatus(UUID videoId, User user) {
         Video video = videoRepository.findById(videoId)
@@ -319,6 +325,7 @@ public class SocialService {
         return new LikeStatusDTO(likeCount, userLiked, dislikeCount, userDisliked);
     }
 
+    //toggles like upvote on a comment and updates reaction count
     @Transactional
     public LikeStatusDTO toggleCommentLike(UUID commentId, User user) {
         Comment comment = commentRepository.findById(commentId)
@@ -359,6 +366,7 @@ public class SocialService {
         return new LikeStatusDTO(likeCount, userLiked, 0, false);
     }
 
+    //records single like for a video
     @Transactional
     public void addLike(UUID videoId, User user) {
         Video video = videoRepository.findById(videoId)
@@ -388,6 +396,7 @@ public class SocialService {
         }
     }
 
+    //updates text content of an existing comment owned by user
     @Transactional
     public CommentDTO updateComment(UUID commentId, com.streamhub.social.dto.UpdateCommentDTO dto, User user) {
         Comment comment = commentRepository.findById(commentId)
@@ -439,11 +448,13 @@ public class SocialService {
         return dto;
     }
 
+    //counts total number of comments across platform
     @Transactional(readOnly = true)
     public long countComments() {
         return commentRepository.count();
     }
 
+    //counts total number of video likes across platform
     @Transactional(readOnly = true)
     public long countLikes() {
         return likeRepository.count();

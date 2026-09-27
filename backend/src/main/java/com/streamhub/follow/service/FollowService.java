@@ -37,6 +37,7 @@ public class FollowService {
         this.messagingTemplate = messagingTemplate;
     }
 
+    //creates follow relationship notifies followed user and broadcasts updated counts
     @Transactional
     public void follow(UUID followerId, UUID followingId) {
         if (followerId.equals(followingId)) {
@@ -84,6 +85,7 @@ public class FollowService {
         pushCounts(following);
     }
 
+    //removes follow relationship and pushes updated follower counts
     @Transactional
     public void unfollow(UUID followerId, UUID followingId) {
         followRepository.deleteByFollower_UserIdAndFollowing_UserId(followerId, followingId);
@@ -92,6 +94,7 @@ public class FollowService {
         userRepository.findById(followingId).ifPresent(this::pushCounts);
     }
 
+    //retrieves follower and following totals and whether requester is following
     @Transactional(readOnly = true)
     public FollowCountsResponse getCounts(UUID targetUserId, UUID requesterIdOrNull) {
         long followerCount = followRepository.countByFollowing_UserId(targetUserId);
@@ -102,6 +105,7 @@ public class FollowService {
         return new FollowCountsResponse(targetUserId, followerCount, followingCount, isFollowing);
     }
 
+    //retrieves paginated followers protecting privacy so only profile owner can view
     @Transactional(readOnly = true)
     public Page<FollowUserDTO> getFollowers(UUID ownerId, UUID requesterId, Pageable pageable) {
         if (requesterId == null || !requesterId.equals(ownerId)) {
@@ -118,6 +122,7 @@ public class FollowService {
                 ));
     }
 
+    //retrieves paginated following creators protecting privacy for profile owner
     @Transactional(readOnly = true)
     public Page<FollowUserDTO> getFollowing(UUID ownerId, UUID requesterId, Pageable pageable) {
         if (requesterId == null || !requesterId.equals(ownerId)) {
@@ -134,6 +139,7 @@ public class FollowService {
                 ));
     }
 
+    //fetches top followed creators ordered by recent activity for navigation sidebar
     @Transactional(readOnly = true)
     public com.streamhub.follow.dto.SidebarFollowResponse getSidebarFollowing(UUID requesterId) {
         long totalFollowing = followRepository.countByFollower_UserId(requesterId);

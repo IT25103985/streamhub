@@ -37,6 +37,7 @@ public class TrendingFallbackStrategy implements RecommendationStrategy {
         this(null, videoRepository);
     }
 
+    //computes trending video recommendations using rolling window events and lifetime views
     @Override
     public List<Video> getRecommendations(User user, int limit) {
         LocalDateTime since = LocalDateTime.now().minusDays(7);

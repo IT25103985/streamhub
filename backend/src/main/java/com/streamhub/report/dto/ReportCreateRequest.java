@@ -19,6 +19,7 @@ public class ReportCreateRequest {
 
     private String details;
 
+    //validates details presence when reason is set to other
     @AssertTrue(message = "Details are required when reason is OTHER")
     public boolean isDetailsValid() {
         if ("OTHER".equals(reason)) {

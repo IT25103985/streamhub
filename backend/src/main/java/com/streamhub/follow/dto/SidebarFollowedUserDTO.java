@@ -2,6 +2,7 @@ package com.streamhub.follow.dto;
 
 import java.util.UUID;
 
+//data transfer object representing a followed creator in the navigation sidebar
 public class SidebarFollowedUserDTO {
     private UUID userId;
     private String username;

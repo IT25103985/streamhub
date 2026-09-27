@@ -50,6 +50,7 @@ public class WatchHistoryController {
         return ResponseEntity.ok().build();
     }
 
+    //records playback progress for video with optional duration
     @PostMapping("/record/{videoId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> recordWatchHistory(
@@ -64,6 +65,7 @@ public class WatchHistoryController {
         return ResponseEntity.ok().build();
     }
 
+    //retrieves paginated watch history for authenticated user
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<WatchHistoryResponseDTO>> getWatchHistory(
@@ -77,6 +79,7 @@ public class WatchHistoryController {
         return ResponseEntity.ok(watchHistoryService.getUserWatchHistory(user, page, size));
     }
 
+    //clears entire watch history for current user
     @DeleteMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> clearWatchHistory(Principal principal) {
@@ -88,6 +91,7 @@ public class WatchHistoryController {
         return ResponseEntity.noContent().build();
     }
 
+    //removes specific video from user watch history
     @DeleteMapping("/{videoId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> removeVideoFromHistory(

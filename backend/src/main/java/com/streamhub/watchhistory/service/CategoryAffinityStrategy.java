@@ -26,6 +26,7 @@ public class CategoryAffinityStrategy implements RecommendationStrategy {
         this.videoRepository = videoRepository;
     }
 
+    //recommends top videos from user most watched category meeting engagement minimum
     @Override
     public List<Video> getRecommendations(User user, int limit) {
         List<Object[]> categoryData = watchHistoryRepository.findMostWatchedCategoryDataByUser(user, PageRequest.of(0, 1));

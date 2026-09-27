@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "UserSettings")
+//database entity storing user toggle settings for history and notifications
 public class UserSettings {
 
     @Id

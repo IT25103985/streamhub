@@ -30,6 +30,7 @@ public class SocialController {
     }
 
     //comment creation and listing endpoints
+    //posts a new top level comment or reply on a video
     @PostMapping("/videos/{videoId}/comments")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CommentDTO> addComment(
@@ -44,12 +45,14 @@ public class SocialController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdComment);
     }
 
+    //retrieves all comments for a video with user like state
     @GetMapping("/videos/{videoId}/comments")
     public ResponseEntity<List<CommentDTO>> getCommentsByVideo(@PathVariable UUID videoId, Principal principal) {
         User user = (principal != null) ? userRepository.findByUsername(principal.getName()).orElse(null) : null;
         return ResponseEntity.ok(socialService.getCommentsByVideo(videoId, user));
     }
 
+    //deletes comment after checking ownership or moderator role
     @DeleteMapping("/comments/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deleteComment(@PathVariable UUID commentId, Principal principal) {
@@ -60,6 +63,7 @@ public class SocialController {
         return ResponseEntity.noContent().build();
     }
 
+    //edits content of an existing comment
     @PatchMapping("/comments/{commentId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CommentDTO> updateComment(

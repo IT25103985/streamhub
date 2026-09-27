@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+//repository managing comment upvotes and user like status
 public interface CommentLikeRepository extends JpaRepository<CommentLike, UUID> {
     Optional<CommentLike> findByCommentAndUser(Comment comment, User user);
     int countByComment(Comment comment);
