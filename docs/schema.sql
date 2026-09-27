@@ -84,7 +84,6 @@ CREATE TABLE Playlist (
     owner_id        UNIQUEIDENTIFIER  NOT NULL,
     name            NVARCHAR(100)     NOT NULL,
     description     NVARCHAR(255)     NULL,
-    is_public       BIT               NOT NULL DEFAULT 1,
     privacy         VARCHAR(50)       NULL DEFAULT 'PUBLIC',
     thumbnail_url   VARCHAR(255)      NULL,
     is_hidden       BIT               NOT NULL DEFAULT 0,
