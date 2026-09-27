@@ -26,6 +26,7 @@ public class UserCategoryPreferenceController {
         this.userRepository = userRepository;
     }
 
+    //resolves currently authenticated user from security principal
     private User getAuthenticatedUser(Principal principal) {
         if (principal == null) return null;
         return userRepository.findByUsername(principal.getName()).orElse(null);
@@ -60,7 +61,7 @@ public class UserCategoryPreferenceController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Category preferences saved successfully"));
     }
 
-    //dismisses/skips onboarding and marks hasSetInterests true
+    //dismisses onboarding and marks user interests as configured
     @PostMapping("/skip-onboarding")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> skipOnboarding(Principal principal) {

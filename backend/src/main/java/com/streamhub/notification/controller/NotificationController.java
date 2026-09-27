@@ -33,6 +33,7 @@ public class NotificationController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    //retrieves paginated list of notifications for the authenticated user
     @GetMapping
     public ResponseEntity<Page<NotificationResponse>> getNotifications(
             Principal principal,
@@ -42,6 +43,7 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getUserNotifications(user.getUserId(), PageRequest.of(page, size)));
     }
 
+    //retrieves count of unread notifications for badge counter
     @GetMapping("/unread-count")
     public ResponseEntity<UnreadCountResponse> getUnreadCount(Principal principal) {
         User user = getCurrentUser(principal);
@@ -59,6 +61,7 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
+    //marks all notifications as read for current user
     @PatchMapping("/read-all")
     public ResponseEntity<Void> markAllAsRead(Principal principal) {
         User user = getCurrentUser(principal);

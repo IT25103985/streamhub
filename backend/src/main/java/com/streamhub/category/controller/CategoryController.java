@@ -24,6 +24,7 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
+    //retrieves all video categories with optional search filtering
     @GetMapping
     public ResponseEntity<List<CategoryDto>> getAllCategories(@RequestParam(required = false) String search) {
         return ResponseEntity.ok(categoryService.getAllCategories(search));
@@ -35,6 +36,7 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.getCategoryById(id));
     }
 
+    //creates a new video category with administrator authorization
     @PostMapping
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<CategoryDto> createCategory(@Valid @RequestBody CreateCategoryDto dto) {
@@ -42,6 +44,7 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
 
+    //updates existing category name or description
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<CategoryDto> updateCategory(@PathVariable UUID id, @Valid @RequestBody UpdateCategoryDto dto) {
@@ -49,6 +52,7 @@ public class CategoryController {
         return ResponseEntity.ok(updatedCategory);
     }
 
+    //deletes category with administrator authorization
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {

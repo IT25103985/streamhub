@@ -1,4 +1,3 @@
-# =====================================================================
 # daily-sync.ps1
 #
 # Run this once a day. It will:
@@ -16,7 +15,6 @@
 #   - Run docs/schema.sql once against your local StreamHubDB
 #
 # Usage:  powershell -ExecutionPolicy Bypass -File data-sync\daily-sync.ps1
-# =====================================================================
 
 param(
     [string]$SqlServerInstance = "localhost\SQLEXPRESS",

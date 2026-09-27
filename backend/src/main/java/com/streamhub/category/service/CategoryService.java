@@ -25,6 +25,7 @@ public class CategoryService {
         this.videoRepository = videoRepository;
     }
 
+    //retrieves and sorts list of all categories matching search term
     @Transactional(readOnly = true)
     public List<CategoryDto> getAllCategories(String search) {
         List<Category> categories;
@@ -40,6 +41,7 @@ public class CategoryService {
                 .collect(Collectors.toList());
     }
 
+    //finds single category by id or throws not found exception
     @Transactional(readOnly = true)
     public CategoryDto getCategoryById(UUID id) {
         Category category = categoryRepository.findById(id)
@@ -59,6 +61,7 @@ public class CategoryService {
         return mapToDto(savedCategory);
     }
 
+    //updates category details while validating unique name constraint
     @Transactional
     public CategoryDto updateCategory(UUID id, UpdateCategoryDto dto) {
         Category category = categoryRepository.findById(id)
@@ -104,6 +107,7 @@ public class CategoryService {
         return new CategoryDto(category.getId(), category.getName(), category.getDescription());
     }
 
+    //returns total number of categories in database
     @Transactional(readOnly = true)
     public long countAll() {
         return categoryRepository.count();

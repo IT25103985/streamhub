@@ -81,6 +81,7 @@ public class PlaylistService {
         return mapToResponseDTO(saved);
     }
 
+    //updates existing playlist fields and optionally changes cover thumbnail
     @Transactional
     public PlaylistResponseDTO updatePlaylist(UUID playlistId, UpdatePlaylistDTO dto, User owner, MultipartFile thumbnail) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -120,6 +121,7 @@ public class PlaylistService {
                 .collect(Collectors.toList());
     }
 
+    //fetches all public non hidden playlists across the platform
     @Transactional(readOnly = true)
     public List<PlaylistResponseDTO> getPublicPlaylists() {
         return playlistRepository.findPublicPlaylists().stream()
@@ -135,6 +137,7 @@ public class PlaylistService {
         return page.map(this::mapToResponseDTO);
     }
 
+    //retrieves playlists owned by specific user respecting privacy rules
     @Transactional(readOnly = true)
     public List<PlaylistResponseDTO> getPlaylistsByOwner(UUID ownerId, boolean onlyOwnVideos, User requester) {
         List<Playlist> playlists;
@@ -159,6 +162,7 @@ public class PlaylistService {
                 .collect(Collectors.toList());
     }
 
+    //fetches detailed playlist entity with ordered list of accessible videos
     @Transactional(readOnly = true)
     public PlaylistDetailDTO getPlaylistDetails(UUID playlistId, User currentUser) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -218,6 +222,7 @@ public class PlaylistService {
         }
     }
 
+    //removes video from playlist and collapses indices to maintain contiguous order
     @Transactional
     public void removeVideoFromPlaylist(UUID playlistId, UUID videoId, User currentUser) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -287,6 +292,7 @@ public class PlaylistService {
         playlistVideoRepository.saveAllAndFlush(currentVideos);
     }
 
+    //deletes playlist entity owned by current user
     @Transactional
     public void deletePlaylist(UUID playlistId, User currentUser) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -299,6 +305,7 @@ public class PlaylistService {
         playlistRepository.delete(playlist);
     }
 
+    //retrieves all platform playlists for administrator review
     @Transactional(readOnly = true)
     public List<PlaylistResponseDTO> getAllPlaylistsForAdmin() {
         return playlistRepository.findAll().stream()
@@ -306,6 +313,7 @@ public class PlaylistService {
                 .collect(Collectors.toList());
     }
 
+    //toggles hidden status of playlist for moderation purposes
     @Transactional
     public void togglePlaylistHidden(UUID playlistId) {
         Playlist playlist = playlistRepository.findById(playlistId)
@@ -315,6 +323,7 @@ public class PlaylistService {
         playlistRepository.save(playlist);
     }
 
+    //administratively removes playlist as content moderator
     @Transactional
     public void deletePlaylistAsModerator(UUID playlistId) {
         Playlist playlist = playlistRepository.findById(playlistId)

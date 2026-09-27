@@ -3,6 +3,7 @@ package com.streamhub.settings.dto;
 import com.streamhub.settings.entity.UserSettings;
 import java.util.UUID;
 
+//data transfer object transferring user notification and watch history preferences
 public class UserSettingsDTO {
     private UUID userId;
     private boolean watchHistoryEnabled;

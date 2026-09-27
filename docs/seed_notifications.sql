@@ -1,8 +1,6 @@
--- =====================================================================
 -- SEED SCRIPT FOR NOTIFICATIONS (MANUAL TESTING)
 -- Run this manually against StreamHubDB to test the Notification system
 -- since no real triggers exist yet in Phase A.
--- =====================================================================
 
 -- Replace the @TestUserId value with an actual user_id from your local database
 DECLARE @TestUserId UNIQUEIDENTIFIER = (SELECT TOP 1 user_id FROM [User]);

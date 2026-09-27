@@ -2,6 +2,7 @@ package com.streamhub.follow.dto;
 
 import java.util.List;
 
+//response payload for sidebar containing total following count and top creators
 public class SidebarFollowResponse {
     private long totalFollowing;
     private List<SidebarFollowedUserDTO> topFollowed;
