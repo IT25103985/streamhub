@@ -32,7 +32,7 @@ const PlaylistCard = ({ playlist, isOwner, onPlaylistUpdated }) => {
   const ownerId = playlist.ownerId || playlist.uploaderId || playlist.userId;
   const creator = playlist.ownerUsername || playlist.uploaderUsername || playlist.creator || 'Unknown';
   const videoCount = typeof playlist.videoCount === 'number' ? playlist.videoCount : (playlist.videos?.length || 0);
-  const isPrivate = playlist.privacy === 'PRIVATE' || playlist.isPublic === false;
+  const isPrivate = playlist.privacy === 'PRIVATE';
   const isHidden = playlist.isHidden ?? playlist.hidden;
 
   const handleCardClick = () => {

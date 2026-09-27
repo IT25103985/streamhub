@@ -56,12 +56,14 @@ WHERE updated_at > '$(Since)';
 
 PRINT '-- TABLE:Playlist';
 SELECT
-    'INSERT INTO Playlist (playlist_id, owner_id, name, description, is_public, created_at, updated_at) VALUES (' +
+    'INSERT INTO Playlist (playlist_id, owner_id, name, description, privacy, thumbnail_url, is_hidden, created_at, updated_at) VALUES (' +
     '''' + CAST(playlist_id AS NVARCHAR(36)) + ''', ' +
     '''' + CAST(owner_id AS NVARCHAR(36)) + ''', ' +
     '''' + REPLACE(name, '''', '''''') + ''', ' +
     CASE WHEN description IS NULL THEN 'NULL' ELSE '''' + REPLACE(description, '''', '''''') + '''' END + ', ' +
-    CASE WHEN is_public = 1 THEN '1' ELSE '0' END + ', ' +
+    '''' + REPLACE(privacy, '''', '''''') + ''', ' +
+    CASE WHEN thumbnail_url IS NULL THEN 'NULL' ELSE '''' + REPLACE(thumbnail_url, '''', '''''') + '''' END + ', ' +
+    CASE WHEN is_hidden = 1 THEN '1' ELSE '0' END + ', ' +
     '''' + CONVERT(VARCHAR(30), created_at, 126) + ''', ' +
     '''' + CONVERT(VARCHAR(30), updated_at, 126) + ''');'
 FROM Playlist
