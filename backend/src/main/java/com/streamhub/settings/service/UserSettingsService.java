@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+//service handling retrieval modification of user preferences and account deletion
 public class UserSettingsService {
 
     private final UserSettingsRepository userSettingsRepository;
@@ -21,6 +22,7 @@ public class UserSettingsService {
         this.entityManager = entityManager;
     }
 
+    //retrieves existing user settings or creates default settings entry
     @Transactional
     public UserSettings getOrCreate(UUID userId) {
         return userSettingsRepository.findById(userId)
@@ -32,6 +34,7 @@ public class UserSettingsService {
                 });
     }
 
+    //updates individual notification and history preferences
     @Transactional
     public UserSettings update(UUID userId, Map<String, Boolean> updates) {
         UserSettings settings = getOrCreate(userId);
@@ -50,40 +53,38 @@ public class UserSettingsService {
         return userSettingsRepository.save(settings);
     }
 
-    // Deletes everything that belongs to this user account, then removes the user row.
-    // The order matters — child rows that reference other child rows must go first.
+    //cascades deletion across all related entities before removing user record
     @Transactional
     public void deleteAccount(UUID userId) {
 
-        // 1. CommentLike rows on replies the user wrote
+        //deletes comment likes on replies authored by user
         entityManager.createNativeQuery(
             "DELETE FROM [CommentLike] WHERE comment_id IN " +
             "(SELECT comment_id FROM [Comment] WHERE user_id = :uid AND parent_comment_id IS NOT NULL)")
             .setParameter("uid", userId).executeUpdate();
 
-        // 2. CommentLike rows on top-level comments the user wrote
+        //deletes comment likes on comments authored by user
         entityManager.createNativeQuery(
             "DELETE FROM [CommentLike] WHERE comment_id IN " +
             "(SELECT comment_id FROM [Comment] WHERE user_id = :uid)")
             .setParameter("uid", userId).executeUpdate();
 
-        // 3. CommentLike rows the user created on other people's comments
+        //deletes comment likes given by user
         entityManager.createNativeQuery(
             "DELETE FROM [CommentLike] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 4. Replies the user wrote (self-referencing FK must go before parent comments)
+        //deletes reply comments authored by user
         entityManager.createNativeQuery(
             "DELETE FROM [Comment] WHERE user_id = :uid AND parent_comment_id IS NOT NULL")
             .setParameter("uid", userId).executeUpdate();
 
-        // 5. All remaining comments by this user
+        //deletes top level comments authored by user
         entityManager.createNativeQuery(
             "DELETE FROM [Comment] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 6. Comments on the user's own videos (other people's comments on their content)
-        //    Replies first, then parents
+        //deletes comments on videos uploaded by user
         entityManager.createNativeQuery(
             "DELETE FROM [CommentLike] WHERE comment_id IN " +
             "(SELECT c.comment_id FROM [Comment] c " +
@@ -102,7 +103,7 @@ public class UserSettingsService {
             "(SELECT video_id FROM [Video] WHERE uploader_id = :uid)")
             .setParameter("uid", userId).executeUpdate();
 
-        // 7. View events and watch history
+        //deletes view events and watch history records
         entityManager.createNativeQuery(
             "DELETE FROM [VideoViewEvent] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
@@ -111,13 +112,13 @@ public class UserSettingsService {
             "DELETE FROM [watch_history] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 8. Playlist videos, then playlists owned by the user
+        //deletes playlist items and playlists owned by user
         entityManager.createNativeQuery(
             "DELETE FROM [playlist_video] WHERE playlist_id IN " +
             "(SELECT playlist_id FROM [Playlist] WHERE owner_id = :uid)")
             .setParameter("uid", userId).executeUpdate();
 
-        // Also remove any playlist_video rows where the video belongs to the user
+        //removes playlist items referencing videos of user
         entityManager.createNativeQuery(
             "DELETE FROM [playlist_video] WHERE video_id IN " +
             "(SELECT video_id FROM [Video] WHERE uploader_id = :uid)")
@@ -127,7 +128,7 @@ public class UserSettingsService {
             "DELETE FROM [Playlist] WHERE owner_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 9. Likes and dislikes by this user, and on the user's videos
+        //deletes video likes and dislikes
         entityManager.createNativeQuery(
             "DELETE FROM [Like] WHERE user_id = :uid OR video_id IN " +
             "(SELECT video_id FROM [Video] WHERE uploader_id = :uid)")
@@ -138,18 +139,18 @@ public class UserSettingsService {
             "(SELECT video_id FROM [Video] WHERE uploader_id = :uid)")
             .setParameter("uid", userId).executeUpdate();
 
-        // 10. Notifications sent to or triggered by this user
+        //deletes notifications associated with user
         entityManager.createNativeQuery(
             "DELETE FROM [notification] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 11. Reports filed by or about this user
+        //deletes reports filed by or targeting user
         entityManager.createNativeQuery(
             "DELETE FROM [report] WHERE reporter_id = :uid OR moderator_id = :uid " +
             "OR (reportable_id IN (SELECT video_id FROM [Video] WHERE uploader_id = :uid))")
             .setParameter("uid", userId).executeUpdate();
 
-        // 12. Videos uploaded by this user (view events already removed above)
+        //deletes uploaded videos and associated views
         entityManager.createNativeQuery(
             "DELETE FROM [VideoViewEvent] WHERE video_id IN " +
             "(SELECT video_id FROM [Video] WHERE uploader_id = :uid)")
@@ -159,17 +160,17 @@ public class UserSettingsService {
             "DELETE FROM [Video] WHERE uploader_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 13. Follow relationships where this user is follower or following
+        //deletes follow relationships for user
         entityManager.createNativeQuery(
             "DELETE FROM [Follow] WHERE follower_id = :uid OR following_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 14. Refresh tokens
+        //deletes refresh tokens of user
         entityManager.createNativeQuery(
             "DELETE FROM [refresh_token] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 15. Category preferences and settings
+        //deletes category preferences and settings
         entityManager.createNativeQuery(
             "DELETE FROM [UserCategoryPreference] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
@@ -178,7 +179,7 @@ public class UserSettingsService {
             "DELETE FROM [UserSettings] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();
 
-        // 16. Finally remove the user account itself
+        //deletes user account record
         entityManager.createNativeQuery(
             "DELETE FROM [User] WHERE user_id = :uid")
             .setParameter("uid", userId).executeUpdate();

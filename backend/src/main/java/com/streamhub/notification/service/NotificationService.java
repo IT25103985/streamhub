@@ -33,6 +33,7 @@ public class NotificationService {
         this.messagingTemplate = messagingTemplate;
     }
 
+    //creates and persists notification and broadcasts via websocket if enabled by user preferences
     @Transactional
     public NotificationResponse createNotification(UUID userId, String type, String title, String message, String relatedEntityType, UUID relatedEntityId) {
         if (userId == null) return null;
@@ -98,17 +99,20 @@ public class NotificationService {
         }
     }
 
+    //retrieves paginated list of notifications for user
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getUserNotifications(UUID userId, Pageable pageable) {
         return notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::mapToResponse);
     }
 
+    //counts unread notifications for user badge
     @Transactional(readOnly = true)
     public long getUnreadCount(UUID userId) {
         return notificationRepository.countByUser_UserIdAndIsReadFalse(userId);
     }
 
+    //marks single notification as read verifying recipient ownership
     @Transactional
     public void markAsRead(UUID notificationId, UUID userId) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -123,6 +127,7 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
+    //marks all notifications as read for specified user
     @Transactional
     public void markAllAsRead(UUID userId) {
         notificationRepository.markAllAsReadByUserId(userId);

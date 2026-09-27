@@ -23,11 +23,13 @@ public class HelpTopicController {
         this.helpTopicService = helpTopicService;
     }
 
+    //retrieves all published help topics for public support
     @GetMapping
     public ResponseEntity<List<HelpTopicResponse>> getAllTopics() {
         return ResponseEntity.ok(helpTopicService.listAll());
     }
 
+    //creates a new help topic with staff authorization check
     @PostMapping
     @PreAuthorize("hasAnyRole('CONTENT_MODERATOR','ADMINISTRATOR')")
     public ResponseEntity<HelpTopicResponse> createTopic(@Valid @RequestBody HelpTopicRequest request) {
@@ -35,6 +37,7 @@ public class HelpTopicController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    //updates an existing help topic with staff authorization check
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('CONTENT_MODERATOR','ADMINISTRATOR')")
     public ResponseEntity<HelpTopicResponse> updateTopic(@PathVariable UUID id, @Valid @RequestBody HelpTopicRequest request) {
@@ -42,6 +45,7 @@ public class HelpTopicController {
         return ResponseEntity.ok(updated);
     }
 
+    //deletes a help topic with staff authorization check
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CONTENT_MODERATOR','ADMINISTRATOR')")
     public ResponseEntity<Void> deleteTopic(@PathVariable UUID id) {

@@ -25,6 +25,7 @@ public class HelpTopicService {
         this.helpTopicRepository = helpTopicRepository;
     }
 
+    //retrieves all help topics sorted by section and display order
     @Transactional(readOnly = true)
     public List<HelpTopicResponse> listAll() {
         return helpTopicRepository.findAllByOrderBySectionAscDisplayOrderAsc().stream()
@@ -32,6 +33,7 @@ public class HelpTopicService {
                 .collect(Collectors.toList());
     }
 
+    //creates and persists a new help topic entry
     @Transactional
     public HelpTopicResponse create(HelpTopicRequest request) {
         HelpTopic topic = new HelpTopic(
@@ -44,6 +46,7 @@ public class HelpTopicService {
         return HelpTopicResponse.fromEntity(saved);
     }
 
+    //updates existing help topic attributes
     @Transactional
     public HelpTopicResponse update(UUID id, HelpTopicRequest request) {
         HelpTopic topic = helpTopicRepository.findById(id)
@@ -58,6 +61,7 @@ public class HelpTopicService {
         return HelpTopicResponse.fromEntity(saved);
     }
 
+    //removes a help topic by identifier
     @Transactional
     public void delete(UUID id) {
         HelpTopic topic = helpTopicRepository.findById(id)

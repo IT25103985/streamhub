@@ -106,6 +106,7 @@ public class FollowController {
         return ResponseEntity.ok(followService.getFollowing(userId, requesterId, pageable));
     }
 
+    //retrieves followed creators with latest videos for left sidebar display
     @GetMapping("/me/sidebar")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<com.streamhub.follow.dto.SidebarFollowResponse> getSidebarFollowing(Authentication authentication) {

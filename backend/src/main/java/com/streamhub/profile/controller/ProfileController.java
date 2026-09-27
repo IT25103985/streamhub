@@ -38,6 +38,7 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.getMyProfile(user));
     }
 
+    //retrieves public profile information for a specified user
     @GetMapping("/{userId}/profile")
     public ResponseEntity<ProfileResponseDTO> getPublicProfile(@PathVariable java.util.UUID userId) {
         return ResponseEntity.ok(profileService.getPublicProfile(userId));
@@ -68,7 +69,7 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.uploadCover(user, file));
     }
 
-    //static media serving endpoints
+    //streams profile avatar image file as resource
     @GetMapping("/avatar/{filename:.+}")
     public ResponseEntity<Resource> getAvatar(@PathVariable String filename) {
         Resource resource = profileService.loadAvatarAsResource(filename);
@@ -80,6 +81,7 @@ public class ProfileController {
                 .body(resource);
     }
 
+    //streams profile cover banner image file as resource
     @GetMapping("/cover/{filename:.+}")
     public ResponseEntity<Resource> getCover(@PathVariable String filename) {
         Resource resource = profileService.loadCoverAsResource(filename);
@@ -91,11 +93,13 @@ public class ProfileController {
                 .body(resource);
     }
 
+    //retrieves authenticated user entity from security principal
     private User getCurrentUser(Principal principal) {
         return userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
     
+    //determines media content type from file extension
     private String determineContentType(String filename) {
         String lower = filename.toLowerCase();
         if (lower.endsWith(".png")) return MediaType.IMAGE_PNG_VALUE;

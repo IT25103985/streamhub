@@ -184,12 +184,14 @@ public class AuthService {
         });
     }
 
+    //generates a random cryptographically secure token string
     private String generateSecureToken() {
         byte[] randomBytes = new byte[32];
         secureRandom.nextBytes(randomBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
 
+    //hashes raw token string with sha256 before persisting
     private String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -200,6 +202,7 @@ public class AuthService {
         }
     }
 
+    //internal holder class for login authentication details and tokens
     public static class LoginResult {
         public AuthResponse authResponse;
         public String plainRefreshToken;
@@ -214,11 +217,13 @@ public class AuthService {
         }
     }
 
+    //counts total registered users across the platform
     @Transactional(readOnly = true)
     public long countAll() {
         return userRepository.count();
     }
 
+    //calculates user signup trends per day over a given number of days
     @Transactional(readOnly = true)
     public List<java.util.Map<String, Object>> countSignupsByDay(int days) {
         //builds consecutive day buckets oldest date first

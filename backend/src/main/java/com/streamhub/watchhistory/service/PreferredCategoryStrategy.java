@@ -29,6 +29,7 @@ public class PreferredCategoryStrategy implements RecommendationStrategy {
         this.trendingFallbackStrategy = trendingFallbackStrategy;
     }
 
+    //recommends videos matching user onboarding categories backfilling with trending
     @Override
     public List<Video> getRecommendations(User user, int limit) {
         if (user == null) {

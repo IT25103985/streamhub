@@ -37,6 +37,7 @@ public class VideoController {
         this.watchHistoryService = watchHistoryService;
     }
 
+    //increments view count for video when watched
     @PostMapping("/{id}/view")
     public ResponseEntity<Void> incrementViewCount(@PathVariable UUID id, Principal principal) {
         User currentUser = principal != null ? userRepository.findByUsername(principal.getName()).orElse(null) : null;
@@ -52,6 +53,7 @@ public class VideoController {
         return ResponseEntity.ok(watchHistoryService.getPlatformTrendingVideos(limit));
     }
 
+    //retrieves saved playback timestamp for the authenticated user
     @GetMapping("/{id}/resume-position")
     public ResponseEntity<Map<String, Integer>> getResumePosition(@PathVariable UUID id, Principal principal) {
         if (principal == null) {
@@ -83,6 +85,7 @@ public class VideoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedVideo);
     }
 
+    //replaces existing thumbnail image for a video
     @PatchMapping(value = "/{id}/thumbnail", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<VideoResponseDTO> replaceThumbnail(
@@ -96,6 +99,7 @@ public class VideoController {
         return ResponseEntity.ok(updatedVideo);
     }
 
+    //updates metadata and privacy setting of an existing video
     @PutMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<VideoResponseDTO> updateVideo(
@@ -146,6 +150,7 @@ public class VideoController {
         }
     }
 
+    //retrieves paginated video feed from channels the user follows
     @GetMapping("/following")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<org.springframework.data.domain.Page<VideoResponseDTO>> getFollowingVideos(
@@ -183,12 +188,14 @@ public class VideoController {
         return ResponseEntity.ok(videoService.getAllVideos(parsedUploaderId, search, categoryId, pageable, currentUser, includeHidden));
     }
 
+    //retrieves single video details with permission check
     @GetMapping("/{id}")
     public ResponseEntity<VideoResponseDTO> getVideoDetails(@PathVariable UUID id, Principal principal) {
         User currentUser = principal != null ? userRepository.findByUsername(principal.getName()).orElse(null) : null;
         return ResponseEntity.ok(videoService.getVideoDetails(id, currentUser));
     }
 
+    //toggles visibility of video for moderation purposes
     @PatchMapping("/{id}/toggle-hide")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'CONTENT_MODERATOR')")
     public ResponseEntity<VideoResponseDTO> toggleVideoHidden(@PathVariable UUID id) {
@@ -196,6 +203,7 @@ public class VideoController {
     }
 
     //video deletion endpoint
+    //deletes video after verifying uploader ownership
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVideo(@PathVariable UUID id, Principal principal) {
         User currentUser = userRepository.findByUsername(principal.getName())
@@ -205,6 +213,7 @@ public class VideoController {
         return ResponseEntity.noContent().build();
     }
 
+    //removes video administratively with moderation reason
     @DeleteMapping("/{id}/moderate")
     @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'CONTENT_MODERATOR')")
     public ResponseEntity<Void> moderateDeleteVideo(

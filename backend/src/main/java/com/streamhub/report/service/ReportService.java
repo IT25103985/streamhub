@@ -89,13 +89,14 @@ public class ReportService {
 
         return new ReportResponse(saved, previewText);
     }
-    //READ
+    //retrieves paginated reports submitted by the given user
     @Transactional(readOnly = true)
     public Page<ReportResponse> getMyReports(UUID reporterId, Pageable pageable) {
         return reportRepository.findByReporter_UserId(reporterId, pageable)
                 .map(r -> new ReportResponse(r, getPreviewText(r)));
     }
 
+    //retrieves reports filtered by status and type with pagination
     @Transactional(readOnly = true)
     public Page<ReportResponse> getReports(String status, String type, Pageable pageable) {
         Page<Report> reports;
@@ -111,13 +112,14 @@ public class ReportService {
         return reports.map(r -> new ReportResponse(r, getPreviewText(r)));
     }
 
+    //retrieves full report details and a content snapshot for moderation
     @Transactional(readOnly = true)
     public ReportDetailResponse getReportDetails(UUID reportId) {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
         return new ReportDetailResponse(new ReportResponse(report, getPreviewText(report)), buildContentSnapshot(report));
     }
-//Update
+    //updates report status and notifies the reporter of changes
     @Transactional
     public ReportResponse updateReportStatus(UUID reportId, String newStatus) {
         Report report = reportRepository.findById(reportId)
@@ -160,7 +162,7 @@ public class ReportService {
         String type = report.getReportableType();
         String action = request.getAction();
         UUID ownerId = null;
-// Moderation Business Rule Validation
+        //moderation business rule validation preventing direct profile deletion
         if ("PROFILE".equals(type) && ("HIDDEN".equals(action) || "DELETED".equals(action))) {
             throw new IllegalArgumentException("Cannot hide or delete a user profile directly");
         }
@@ -176,7 +178,7 @@ public class ReportService {
                         videoRepository.save(video);
 
                         
-                        //DELETE Video----------------
+                        //video deletion branch
                         
                     } else if ("DELETED".equals(action)) {
                         videoService.moderateDeleteVideo(video.getVideoId(), request.getActionReason(), moderator);
@@ -190,7 +192,7 @@ public class ReportService {
                     if ("HIDDEN".equals(action)) {
                         comment.setHidden(true);
                         commentRepository.save(comment);
-                        //COMMENT delete------------------
+                        //comment deletion branch
                     } else if ("DELETED".equals(action)) {
                         socialService.moderateDeleteComment(comment.getCommentId());
                     }
@@ -203,7 +205,7 @@ public class ReportService {
                     if ("HIDDEN".equals(action)) {
                         playlist.setHidden(true);
                         playlistRepository.save(playlist);
-                        //Playlist deleted------------------------
+                        //playlist deletion branch
                     } else if ("DELETED".equals(action)) {
                         //remove reported playlist entity
                         playlistRepository.delete(playlist);
@@ -227,7 +229,7 @@ public class ReportService {
         Report savedReport = reportRepository.save(report);
         String previewText = getPreviewText(savedReport);
 
-        // Notify reporter that action was taken on their submitted report
+        //notifies reporter that action was taken on their submitted report
         if (notificationService != null && report.getReporter() != null) {
             try {
                 String actionNote = (request.getActionReason() != null && !request.getActionReason().trim().isEmpty()) 
@@ -245,7 +247,7 @@ public class ReportService {
             }
         }
 
-        // Notify content owner if moderation action was taken
+        //notifies content owner if moderation action was taken
         if (ownerId != null && !"NONE".equals(action) && notificationService != null) {
             String title = "Moderation Action Taken on Your " + type.charAt(0) + type.substring(1).toLowerCase();
             String reasonText = (request.getActionReason() != null && !request.getActionReason().trim().isEmpty())
@@ -337,7 +339,7 @@ public class ReportService {
                     break;
             }
         }
-// Input Sanitization & Fallback Validation
+        //validates and sanitizes action reversal reason
         String reason = (request != null && request.getReason() != null && !request.getReason().trim().isEmpty())
                 ? request.getReason().trim()
                 : "Moderation action was reversed after review";
@@ -367,8 +369,7 @@ public class ReportService {
 
         return new ReportResponse(reportRepository.save(report), getPreviewText(report));
     }
-    //Entity Existence & Data Integrity Validation
-
+    //validates reportable content existence and prevents self reporting
     private void validateReportableContent(String type, UUID id, UUID reporterId) {
         if (type == null || id == null) {
             throw new IllegalArgumentException("Reportable type and ID must not be null");
@@ -411,6 +412,7 @@ public class ReportService {
         }
     }
 
+    //resolves preview title or snippet for the reported entity
     private String getPreviewText(Report report) {
         try {
             switch (report.getReportableType()) {
@@ -434,6 +436,7 @@ public class ReportService {
         return "Unknown Content";
     }
 
+    //builds contextual snapshot details of reported entity for moderator preview
     private Map<String, Object> buildContentSnapshot(Report report) {
         Map<String, Object> snapshot = new HashMap<>();
         snapshot.put("type", report.getReportableType());
@@ -471,6 +474,7 @@ public class ReportService {
         return snapshot;
     }
 
+    //counts reports matching the given status
     @Transactional(readOnly = true)
     public long countByStatus(String status) {
         if (status == null) {

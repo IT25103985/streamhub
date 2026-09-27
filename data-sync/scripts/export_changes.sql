@@ -1,4 +1,3 @@
--- =====================================================================
 -- export_changes.sql
 --
 -- Called by daily-sync.ps1 via sqlcmd. Prints INSERT statements for
@@ -9,7 +8,7 @@
 --
 -- Do not run this file by hand unless you're testing it -- it's meant
 -- to be driven by daily-sync.ps1, which supplies $(Since).
--- =====================================================================
+
 SET NOCOUNT ON;
 
 PRINT '-- TABLE:User';

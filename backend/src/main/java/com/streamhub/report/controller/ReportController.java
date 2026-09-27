@@ -29,6 +29,7 @@ public class ReportController {
     }
 
     //report submission endpoint
+    //submits new report against video comment or user
     @PostMapping
     public ResponseEntity<?> createReport(@Valid @RequestBody ReportCreateRequest request, Authentication authentication) {
         try {
@@ -45,6 +46,7 @@ public class ReportController {
         }
     }
 
+    //retrieves paginated reports submitted by authenticated user
     @GetMapping("/mine")
     public ResponseEntity<Page<ReportResponse>> getMyReports(
             @RequestParam(defaultValue = "0") int page,
@@ -55,6 +57,7 @@ public class ReportController {
     }
 
     //moderation report list endpoint
+    //retrieves paginated reports for moderation dashboard
     @GetMapping
     @PreAuthorize("hasRole('ADMINISTRATOR') or hasRole('CONTENT_MODERATOR')")
     public ResponseEntity<Page<ReportResponse>> getReports(
@@ -65,18 +68,21 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getReports(status, type, PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))));
     }
 
+    //fetches detailed report information including target entity data
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR') or hasRole('CONTENT_MODERATOR')")
     public ResponseEntity<ReportDetailResponse> getReport(@PathVariable UUID id) {
         return ResponseEntity.ok(reportService.getReportDetails(id));
     }
 
+    //updates moderation report status to under review or dismissed
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMINISTRATOR') or hasRole('CONTENT_MODERATOR')")
     public ResponseEntity<ReportResponse> updateStatus(@PathVariable UUID id, @Valid @RequestBody ReportStatusRequest request) {
         return ResponseEntity.ok(reportService.updateReportStatus(id, request.getStatus()));
     }
 
+    //executes moderator action such as hide delete or warn
     @PostMapping("/{id}/action")
     @PreAuthorize("hasRole('ADMINISTRATOR') or hasRole('CONTENT_MODERATOR')")
     public ResponseEntity<?> takeAction(@PathVariable UUID id, @Valid @RequestBody ReportActionRequest request, Authentication authentication) {

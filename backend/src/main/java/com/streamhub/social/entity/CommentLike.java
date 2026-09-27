@@ -11,6 +11,7 @@ import java.util.UUID;
 @Table(name = "CommentLike", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"comment_id", "user_id"})
 })
+//database entity recording a user upvote reaction on a comment
 public class CommentLike {
 
     @Id

@@ -45,6 +45,7 @@ public class PlaylistController {
         return ResponseEntity.status(HttpStatus.CREATED).body(playlistService.createPlaylist(dto, user, thumbnail));
     }
 
+    //updates playlist name description privacy and thumbnail
     @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PlaylistResponseDTO> updatePlaylist(
@@ -58,6 +59,7 @@ public class PlaylistController {
     }
 
     //user playlist collection query
+    //retrieves playlists owned by the authenticated user
     @GetMapping("/mine")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<PlaylistResponseDTO>> getUserPlaylists(
@@ -69,6 +71,7 @@ public class PlaylistController {
         return ResponseEntity.ok(playlistService.getUserPlaylists(user, onlyOwnVideos, search));
     }
 
+    //retrieves all publicly accessible playlists
     @GetMapping("/public")
     public ResponseEntity<List<PlaylistResponseDTO>> getPublicPlaylists() {
         return ResponseEntity.ok(playlistService.getPublicPlaylists());
@@ -84,6 +87,7 @@ public class PlaylistController {
         return ResponseEntity.ok(playlistService.searchPlaylists(query, categoryId, pageable));
     }
 
+    //fetches visible playlists belonging to a specific owner
     @GetMapping
     public ResponseEntity<List<PlaylistResponseDTO>> getPlaylistsByOwner(
             @RequestParam UUID ownerId,
@@ -147,6 +151,7 @@ public class PlaylistController {
         return ResponseEntity.ok().build();
     }
 
+    //deletes playlist after checking ownership
     @DeleteMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> deletePlaylist(@PathVariable UUID id, Principal principal) {
