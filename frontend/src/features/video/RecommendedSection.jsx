@@ -18,11 +18,10 @@ const RecommendedSection = ({ limit = 4, onSelectVideo }) => {
       return;
     }
     try {
-      //fetch personalized recommendations
-      const data = await watchHistoryService.getRecommendations(limit);
+      //fetch personalized recommendations (max 4)
+      const data = await watchHistoryService.getRecommendations(Math.min(limit, 4));
       const filtered = (data || []).filter((v) => {
         if (!v) return false;
-        if ((v.viewCount || 0) < 10) return false;
         if (user) {
           const uId = user.userId || user.id;
           const vOwnerId = v.ownerId || v.uploaderId;
@@ -36,7 +35,7 @@ const RecommendedSection = ({ limit = 4, onSelectVideo }) => {
           }
         }
         return true;
-      });
+      }).slice(0, 4);
       setRecommendedVideos(filtered);
     } catch (err) {
       console.error('Failed to load recommendations:', err);

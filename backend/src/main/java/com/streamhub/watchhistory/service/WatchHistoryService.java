@@ -25,6 +25,8 @@ public class WatchHistoryService {
 
     //threshold of distinct videos watched before switching from onboarding preferences to behavioral affinity
     public static final int MIN_WATCHED_FOR_BEHAVIORAL = 10;
+    //threshold in days to consider an account as new for onboarding recommendation isolation
+    public static final int NEW_ACCOUNT_DAYS_THRESHOLD = 7;
 
     private final WatchHistoryRepository watchHistoryRepository;
     private final VideoRepository videoRepository;
@@ -114,6 +116,8 @@ public class WatchHistoryService {
             return new java.util.ArrayList<>();
         }
 
+        int effectiveLimit = Math.min(limit, 4);
+
         long watchedCount = watchHistoryRepository.countDistinctWatchedVideosByUser(user);
         //gate fresh accounts with neither onboarding preferences nor behavioral history
         if (!user.isHasSetInterests() && watchedCount < MIN_WATCHED_FOR_BEHAVIORAL) {
@@ -121,35 +125,58 @@ public class WatchHistoryService {
         }
 
         List<Video> recommendations = new java.util.ArrayList<>();
-        
-        List<Video> primary = (watchedCount >= MIN_WATCHED_FOR_BEHAVIORAL)
-                ? categoryAffinityStrategy.getRecommendations(user, limit)
-                : preferredCategoryStrategy.getRecommendations(user, limit);
+        boolean newAccount = isNewAccount(user);
 
-        if (primary != null) {
-            for (Video v : primary) {
-                if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < limit) {
-                    recommendations.add(v);
-                }
-            }
-        }
-        
-        //fallback to trending if slots remaining after preferred categories or behavioral affinity
-        if (recommendations.size() < limit) {
-            List<Video> trending = trendingFallbackStrategy.getRecommendations(user, limit);
-            if (trending != null) {
-                for (Video v : trending) {
-                    if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < limit) {
+        if (newAccount && watchedCount < MIN_WATCHED_FOR_BEHAVIORAL) {
+            // New account (<= 7 days old) cold start: recommendations are strictly based on preferred categories (no trending fallback)
+            List<Video> primary = preferredCategoryStrategy.getRecommendations(user, effectiveLimit);
+            if (primary != null) {
+                for (Video v : primary) {
+                    if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < effectiveLimit) {
                         recommendations.add(v);
                     }
                 }
             }
+        } else {
+            // Established account (> 7 days old or has enough behavioral history):
+            List<Video> primary = (watchedCount >= MIN_WATCHED_FOR_BEHAVIORAL)
+                    ? categoryAffinityStrategy.getRecommendations(user, effectiveLimit)
+                    : preferredCategoryStrategy.getRecommendations(user, effectiveLimit);
+
+            if (primary != null) {
+                for (Video v : primary) {
+                    if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < effectiveLimit) {
+                        recommendations.add(v);
+                    }
+                }
+            }
+
+            // Backfill with platform trending if slots remaining after preferred categories or behavioral affinity
+            if (recommendations.size() < effectiveLimit) {
+                List<Video> trending = trendingFallbackStrategy.getRecommendations(user, effectiveLimit);
+                if (trending != null) {
+                    for (Video v : trending) {
+                        if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < effectiveLimit) {
+                            recommendations.add(v);
+                        }
+                    }
+                }
+            }
         }
-        
+
         return recommendations.stream()
                 .filter(v -> isValidRecommendation(v, user))
+                .limit(effectiveLimit)
                 .map(this::mapVideoToDTO)
                 .collect(Collectors.toList());
+    }
+
+    public boolean isNewAccount(User user) {
+        if (user == null) return false;
+        if (user.getCreatedAt() == null) {
+            return true;
+        }
+        return user.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusDays(NEW_ACCOUNT_DAYS_THRESHOLD));
     }
 
     private boolean isValidRecommendation(Video video, User user) {
@@ -157,10 +184,6 @@ public class WatchHistoryService {
             return false;
         }
         if (video.getPrivacy() != null && !"PUBLIC".equalsIgnoreCase(video.getPrivacy())) {
-            return false;
-        }
-        // Recommended videos must have viewCount >= 10
-        if (video.getViewCount() < 10) {
             return false;
         }
         // Exclude user's own videos from recommendations
