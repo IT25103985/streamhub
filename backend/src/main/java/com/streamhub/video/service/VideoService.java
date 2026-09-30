@@ -160,7 +160,12 @@ public class VideoService {
             
             String effectivePrivacy = (privacy != null && "PRIVATE".equalsIgnoreCase(privacy.trim())) ? "PRIVATE" : "PUBLIC";
             Video video = new Video(title, description, newFilename, thumbRelativePath, owner, effectivePrivacy);
-            video.setDurationSeconds(durationSeconds);
+            
+            Integer finalDuration = durationSeconds;
+            if (finalDuration == null || finalDuration <= 0) {
+                finalDuration = com.streamhub.video.util.MediaDurationUtil.extractMp4Duration(targetLocation);
+            }
+            video.setDurationSeconds(finalDuration);
             
             if (categoryId != null) {
                 Category category = categoryRepository.findById(categoryId)
@@ -621,11 +626,46 @@ public class VideoService {
                     if (p == null || !Files.exists(p)) {
                         System.out.println("Cleaning up ghost video with missing physical file: " + v.getVideoId() + " (" + v.getTitle() + ")");
                         deleteVideoInternal(v, "Missing physical file cleanup", null);
+                    } else {
+                        // Backfill duration if missing or invalid
+                        boolean needsSave = false;
+                        if (v.getDurationSeconds() == null || v.getDurationSeconds() <= 0) {
+                            Integer extractedDur = com.streamhub.video.util.MediaDurationUtil.extractMp4Duration(p);
+                            if (extractedDur != null && extractedDur > 0) {
+                                v.setDurationSeconds(extractedDur);
+                                needsSave = true;
+                                System.out.println("Backfilled duration (" + extractedDur + "s) for video: " + v.getVideoId() + " (" + v.getTitle() + ")");
+                            }
+                        }
+                        // Ensure thumbnailPath is populated if missing
+                        if (v.getThumbnailPath() == null && v.getThumbnailUrl() != null) {
+                            v.setThumbnailPath(v.getThumbnailUrl());
+                            needsSave = true;
+                        } else if (v.getThumbnailUrl() == null && v.getThumbnailPath() != null) {
+                            v.setThumbnailUrl(v.getThumbnailPath());
+                            needsSave = true;
+                        }
+                        if (needsSave) {
+                            videoRepository.save(v);
+                        }
                     }
                 }
             }
+
+            // Sync database rows directly via native SQL to ensure thumbnail_path is never NULL
+            try {
+                entityManager.createNativeQuery(
+                    "UPDATE Video SET thumbnail_path = thumbnail_url WHERE (thumbnail_path IS NULL OR thumbnail_path = '') AND thumbnail_url IS NOT NULL"
+                ).executeUpdate();
+                entityManager.createNativeQuery(
+                    "UPDATE Video SET thumbnail_url = thumbnail_path WHERE (thumbnail_url IS NULL OR thumbnail_url = '') AND thumbnail_path IS NOT NULL"
+                ).executeUpdate();
+                entityManager.flush();
+            } catch (Exception sqlEx) {
+                System.err.println("Direct SQL sync for thumbnails: " + sqlEx.getMessage());
+            }
         } catch (Exception e) {
-            System.err.println("Error running video cleanup on startup: " + e.getMessage());
+            System.err.println("Error running video cleanup and backfill on startup: " + e.getMessage());
         }
     }
 

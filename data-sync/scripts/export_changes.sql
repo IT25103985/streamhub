@@ -37,14 +37,15 @@ WHERE updated_at > '$(Since)';
 
 PRINT '-- TABLE:Video';
 SELECT
-    'INSERT INTO Video (video_id, uploader_id, category_id, title, description, file_path, thumbnail_path, duration_seconds, privacy, view_count, created_at, updated_at) VALUES (' +
+    'INSERT INTO Video (video_id, uploader_id, category_id, title, description, file_path, thumbnail_path, thumbnail_url, duration_seconds, privacy, view_count, created_at, updated_at) VALUES (' +
     '''' + CAST(video_id AS NVARCHAR(36)) + ''', ' +
     '''' + CAST(uploader_id AS NVARCHAR(36)) + ''', ' +
     CASE WHEN category_id IS NULL THEN 'NULL' ELSE '''' + CAST(category_id AS NVARCHAR(36)) + '''' END + ', ' +
     '''' + REPLACE(title, '''', '''''') + ''', ' +
     CASE WHEN description IS NULL THEN 'NULL' ELSE '''' + REPLACE(description, '''', '''''') + '''' END + ', ' +
     '''' + REPLACE(file_path, '''', '''''') + ''', ' +
-    CASE WHEN thumbnail_path IS NULL THEN 'NULL' ELSE '''' + REPLACE(thumbnail_path, '''', '''''') + '''' END + ', ' +
+    CASE WHEN thumbnail_path IS NULL AND thumbnail_url IS NULL THEN 'NULL' ELSE '''' + REPLACE(COALESCE(thumbnail_path, thumbnail_url), '''', '''''') + '''' END + ', ' +
+    CASE WHEN thumbnail_url IS NULL AND thumbnail_path IS NULL THEN 'NULL' ELSE '''' + REPLACE(COALESCE(thumbnail_url, thumbnail_path), '''', '''''') + '''' END + ', ' +
     CASE WHEN duration_seconds IS NULL THEN 'NULL' ELSE CAST(duration_seconds AS NVARCHAR(20)) END + ', ' +
     '''' + privacy + ''', ' +
     CAST(view_count AS NVARCHAR(20)) + ', ' +

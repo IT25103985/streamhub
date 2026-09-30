@@ -31,6 +31,9 @@ public class Video {
     @Column(name = "file_path", nullable = false, length = 500)
     private String filePath;
 
+    @Column(name = "thumbnail_path", length = 500)
+    private String thumbnailPath;
+
     @Column(name = "thumbnail_url", nullable = false, length = 255)
     private String thumbnailUrl;
 
@@ -87,6 +90,7 @@ public class Video {
         this.description = description;
         this.filePath = filePath;
         this.thumbnailUrl = thumbnailUrl;
+        this.thumbnailPath = thumbnailUrl;
         this.owner = owner;
         this.privacy = "PUBLIC";
     }
@@ -96,6 +100,7 @@ public class Video {
         this.description = description;
         this.filePath = filePath;
         this.thumbnailUrl = thumbnailUrl;
+        this.thumbnailPath = thumbnailUrl;
         this.owner = owner;
         this.privacy = (privacy != null && !privacy.trim().isEmpty()) ? privacy.trim().toUpperCase() : "PUBLIC";
     }
@@ -132,12 +137,24 @@ public class Video {
         this.filePath = filePath;
     }
 
+    public String getThumbnailPath() {
+        return thumbnailPath != null ? thumbnailPath : thumbnailUrl;
+    }
+
+    public void setThumbnailPath(String thumbnailPath) {
+        this.thumbnailPath = thumbnailPath;
+        if (this.thumbnailUrl == null) {
+            this.thumbnailUrl = thumbnailPath;
+        }
+    }
+
     public String getThumbnailUrl() {
-        return thumbnailUrl;
+        return thumbnailUrl != null ? thumbnailUrl : thumbnailPath;
     }
 
     public void setThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
+        this.thumbnailPath = thumbnailUrl;
     }
 
     public User getOwner() {
