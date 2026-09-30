@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import Chip from './Chip';
 
 //pill selector bar for filtering video feed by category
-const CategoryChipBar = ({ selectedCategoryId, onCategoryChange }) => {
+const CategoryChipBar = ({ selectedCategoryId, onCategoryChange, showFollowing = false }) => {
     const { user } = useContext(AuthContext);
     const [categories, setCategories] = useState([]);
     const [isLocked, setIsLocked] = useState(false);
@@ -39,7 +39,7 @@ const CategoryChipBar = ({ selectedCategoryId, onCategoryChange }) => {
                     filter="all" 
                     label="All" 
                 />
-                {user && (
+                {showFollowing && user && (
                     <Chip 
                         active={currentFilter === 'following'} 
                         onClick={() => onCategoryChange('following')} 

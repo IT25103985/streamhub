@@ -235,6 +235,7 @@ const HomePage = () => {
           <CategoryChipBar 
             selectedCategoryId={categoryId} 
             onCategoryChange={handleCategoryChange} 
+            showFollowing={true}
           />
 
           <SearchResultsTabs 
