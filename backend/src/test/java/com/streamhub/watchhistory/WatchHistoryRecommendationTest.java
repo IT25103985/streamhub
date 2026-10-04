@@ -63,10 +63,19 @@ public class WatchHistoryRecommendationTest {
     private Video userOwnVideo;
     private Category gamingCategory;
 
+    static class TestUserSettingsService extends com.streamhub.settings.service.UserSettingsService {
+        public TestUserSettingsService() {
+            super(null, null);
+        }
+        @Override
+        public com.streamhub.settings.entity.UserSettings getOrCreate(UUID userId) {
+            return new com.streamhub.settings.entity.UserSettings();
+        }
+    }
+
     @BeforeEach
     public void setup() {
-        com.streamhub.settings.service.UserSettingsService userSettingsService = org.mockito.Mockito.mock(com.streamhub.settings.service.UserSettingsService.class);
-        org.mockito.Mockito.when(userSettingsService.getOrCreate(org.mockito.ArgumentMatchers.any())).thenReturn(new com.streamhub.settings.entity.UserSettings());
+        com.streamhub.settings.service.UserSettingsService userSettingsService = new TestUserSettingsService();
 
         trendingFallbackStrategy = new TrendingFallbackStrategy(videoViewEventRepository, videoRepository);
         preferredCategoryStrategy = new PreferredCategoryStrategy(userCategoryPreferenceRepository, videoRepository);
@@ -188,6 +197,21 @@ public class WatchHistoryRecommendationTest {
         assertNotNull(recs);
         assertEquals(1, recs.size());
         assertEquals(highViewVideo.getVideoId(), recs.get(0).getVideoId());
+    }
+
+    @Test
+    //verifies account older than 7 days with cleared watch history (0 watched count) returns empty recommendations
+    public void testClearedWatchHistoryOnEstablishedAccountReturnsEmptyRecommendations() {
+        testUser.setHasSetInterests(true);
+        testUser.setCreatedAt(java.time.LocalDateTime.now().minusDays(10));
+        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(0L);
+
+        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 4);
+
+        assertNotNull(recs);
+        assertTrue(recs.isEmpty());
+        verify(videoRepository, never()).findPublicVideosByCategoriesWithMinViews(any(), anyInt(), any());
+        verify(videoViewEventRepository, never()).findTrendingVideosWithMinWatches(any(), anyLong(), any());
     }
 
     @Test

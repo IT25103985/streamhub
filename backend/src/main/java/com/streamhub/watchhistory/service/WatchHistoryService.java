@@ -119,13 +119,19 @@ public class WatchHistoryService {
         int effectiveLimit = Math.min(limit, 4);
 
         long watchedCount = watchHistoryRepository.countDistinctWatchedVideosByUser(user);
+        boolean newAccount = isNewAccount(user);
+
         //gate fresh accounts with neither onboarding preferences nor behavioral history
         if (!user.isHasSetInterests() && watchedCount < MIN_WATCHED_FOR_BEHAVIORAL) {
             return new java.util.ArrayList<>();
         }
 
+        //if watch history was cleared (or 0 watched) on established accounts (> 7 days old), return empty
+        if (!newAccount && watchedCount == 0) {
+            return new java.util.ArrayList<>();
+        }
+
         List<Video> recommendations = new java.util.ArrayList<>();
-        boolean newAccount = isNewAccount(user);
 
         if (newAccount && watchedCount < MIN_WATCHED_FOR_BEHAVIORAL) {
             // New account (<= 7 days old) cold start: recommendations are strictly based on preferred categories (no trending fallback)
