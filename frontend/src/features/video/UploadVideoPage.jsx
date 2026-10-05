@@ -2,6 +2,7 @@ import { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { AuthContext } from '../../context/AuthContext';
+import { validateUploadForm } from './uploadValidation';
 
 //video upload interface with thumbnail picker title and category selector
 const UploadVideoPage = () => {
@@ -16,8 +17,10 @@ const UploadVideoPage = () => {
   const [file, setFile] = useState(null);
   const [thumbnail, setThumbnail] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
+  const [durationSeconds, setDurationSeconds] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
 
   useEffect(() => {
     axiosInstance.get('/categories')
@@ -36,10 +39,18 @@ const UploadVideoPage = () => {
     );
   }
 
-  const [durationSeconds, setDurationSeconds] = useState(null);
+  const clearFieldError = (fieldName) => {
+    setErrors(prev => {
+      if (!prev[fieldName]) return prev;
+      const next = { ...prev };
+      delete next[fieldName];
+      return next;
+    });
+  };
 
   const processVideoFile = (selectedFile) => {
     setFile(selectedFile);
+    clearFieldError('file');
     try {
       const tempVideo = document.createElement('video');
       tempVideo.preload = 'metadata';
@@ -68,6 +79,7 @@ const UploadVideoPage = () => {
       const selectedThumbnail = e.target.files[0];
       setThumbnail(selectedThumbnail);
       setThumbnailPreview(URL.createObjectURL(selectedThumbnail));
+      clearFieldError('thumbnail');
     }
   };
 
@@ -88,22 +100,33 @@ const UploadVideoPage = () => {
       const selectedThumbnail = e.dataTransfer.files[0];
       setThumbnail(selectedThumbnail);
       setThumbnailPreview(URL.createObjectURL(selectedThumbnail));
+      clearFieldError('thumbnail');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !description || !categoryId || !file || !thumbnail) {
-      setError('Please fill in all fields, select a category, and upload both a video file and a thumbnail.');
+    setServerError('');
+    
+    const validationErrors = validateUploadForm({
+      title,
+      description,
+      categoryId,
+      file,
+      thumbnail
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
     
     setIsUploading(true);
-    setError('');
+    setErrors({});
     
     const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
+    formData.append('title', title.trim());
+    formData.append('description', description.trim());
     formData.append('categoryId', categoryId);
     formData.append('privacy', privacy);
     formData.append('file', file);
@@ -122,7 +145,8 @@ const UploadVideoPage = () => {
       navigate(`/`);
     } catch (err) {
       console.error('Upload failed:', err);
-      setError(err.response?.data?.message || 'Failed to upload video. Please try again.');
+      const message = err.response?.data?.message || (typeof err.response?.data === 'string' ? err.response?.data : 'Failed to upload video. Please try again.');
+      setServerError(message);
       setIsUploading(false);
     }
   };
@@ -135,19 +159,31 @@ const UploadVideoPage = () => {
           <p>Share your next great moment with the <Link to="/" onClick={() => { window.dispatchEvent(new CustomEvent('streamhub-reset-home')); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>Stream<span style={{ color: '#e50914' }}>Hub</span></Link> community.</p>
         </div>
         
-        {error && <div className="upload-error">{error}</div>}
+        {serverError && (
+          <div className="upload-error" role="alert" style={{ color: 'var(--rose)', borderColor: 'var(--rose)', background: 'rgba(251, 113, 133, 0.1)' }}>
+            {serverError}
+          </div>
+        )}
         
-        <form onSubmit={handleSubmit} className="upload-form">
+        <form onSubmit={handleSubmit} className="upload-form" noValidate>
           <div className="form-group">
             <label htmlFor="title">Title</label>
             <input 
               type="text" 
               id="title" 
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { setTitle(e.target.value); clearFieldError('title'); }}
               placeholder="Give your video a catchy title"
               disabled={isUploading}
+              aria-invalid={!!errors.title}
+              aria-describedby={errors.title ? 'title-error' : undefined}
+              style={errors.title ? { borderColor: 'var(--rose)', boxShadow: '0 0 0 2px rgba(251, 113, 133, 0.2)' } : {}}
             />
+            {errors.title && (
+              <span id="title-error" role="alert" style={{ color: 'var(--rose)', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
+                {errors.title}
+              </span>
+            )}
           </div>
           
           <div className="form-group">
@@ -155,11 +191,19 @@ const UploadVideoPage = () => {
             <textarea 
               id="description" 
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { setDescription(e.target.value); clearFieldError('description'); }}
               placeholder="Tell viewers what this video is about"
               rows={4}
               disabled={isUploading}
+              aria-invalid={!!errors.description}
+              aria-describedby={errors.description ? 'description-error' : undefined}
+              style={errors.description ? { borderColor: 'var(--rose)', boxShadow: '0 0 0 2px rgba(251, 113, 133, 0.2)' } : {}}
             />
+            {errors.description && (
+              <span id="description-error" role="alert" style={{ color: 'var(--rose)', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
+                {errors.description}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -167,15 +211,31 @@ const UploadVideoPage = () => {
             <select 
               id="categoryId"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => { setCategoryId(e.target.value); clearFieldError('categoryId'); }}
               disabled={isUploading}
-              style={{ width: '100%', padding: '12px', background: '#333', border: '1px solid #555', borderRadius: '4px', color: '#fff', outline: 'none' }}
+              aria-invalid={!!errors.categoryId}
+              aria-describedby={errors.categoryId ? 'category-error' : undefined}
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                background: '#333', 
+                border: errors.categoryId ? '1px solid var(--rose)' : '1px solid #555', 
+                borderRadius: '4px', 
+                color: '#fff', 
+                outline: 'none',
+                boxShadow: errors.categoryId ? '0 0 0 2px rgba(251, 113, 133, 0.2)' : 'none'
+              }}
             >
               <option value="" disabled>Select a category</option>
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
+            {errors.categoryId && (
+              <span id="category-error" role="alert" style={{ color: 'var(--rose)', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
+                {errors.categoryId}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
@@ -198,6 +258,7 @@ const UploadVideoPage = () => {
               className={`file-drop-zone ${file ? 'has-file' : ''}`}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
+              style={errors.file ? { borderColor: 'var(--rose)', boxShadow: '0 0 0 2px rgba(251, 113, 133, 0.2)' } : {}}
             >
               <input 
                 type="file" 
@@ -205,6 +266,8 @@ const UploadVideoPage = () => {
                 accept="video/*" 
                 onChange={handleFileChange} 
                 disabled={isUploading}
+                aria-invalid={!!errors.file}
+                aria-describedby={errors.file ? 'video-error' : undefined}
               />
               {!file ? (
                 <div className="drop-content">
@@ -224,6 +287,11 @@ const UploadVideoPage = () => {
                 </div>
               )}
             </div>
+            {errors.file && (
+              <span id="video-error" role="alert" style={{ color: 'var(--rose)', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
+                {errors.file}
+              </span>
+            )}
           </div>
           
           <div className="form-group">
@@ -232,7 +300,10 @@ const UploadVideoPage = () => {
               className={`file-drop-zone ${thumbnail ? 'has-file' : ''}`}
               onDragOver={handleDragOver}
               onDrop={handleThumbnailDrop}
-              style={thumbnailPreview ? { padding: '10px' } : {}}
+              style={{
+                ...(thumbnailPreview ? { padding: '10px' } : {}),
+                ...(errors.thumbnail ? { borderColor: 'var(--rose)', boxShadow: '0 0 0 2px rgba(251, 113, 133, 0.2)' } : {})
+              }}
             >
               <input 
                 type="file" 
@@ -240,6 +311,8 @@ const UploadVideoPage = () => {
                 accept="image/jpeg,image/png,image/webp" 
                 onChange={handleThumbnailChange} 
                 disabled={isUploading}
+                aria-invalid={!!errors.thumbnail}
+                aria-describedby={errors.thumbnail ? 'thumbnail-error' : undefined}
               />
               {!thumbnail ? (
                 <div className="drop-content">
@@ -257,6 +330,11 @@ const UploadVideoPage = () => {
                 </div>
               )}
             </div>
+            {errors.thumbnail && (
+              <span id="thumbnail-error" role="alert" style={{ color: 'var(--rose)', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
+                {errors.thumbnail}
+              </span>
+            )}
           </div>
           
           <div className="form-actions">
@@ -271,7 +349,7 @@ const UploadVideoPage = () => {
             <button 
               type="submit" 
               className="btn btn-primary upload-submit-btn" 
-              disabled={isUploading || !title || !description || !categoryId || !file || !thumbnail}
+              disabled={isUploading}
             >
               {isUploading ? (
                 <>

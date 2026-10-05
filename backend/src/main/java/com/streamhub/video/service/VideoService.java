@@ -13,6 +13,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.streamhub.video.validation.UploadValidatorChain;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,6 +34,7 @@ public class VideoService {
     private final jakarta.persistence.EntityManager entityManager;
     private final com.streamhub.notification.service.NotificationService notificationService;
     private final com.streamhub.watchhistory.repository.VideoViewEventRepository videoViewEventRepository;
+    private final UploadValidatorChain uploadValidatorChain;
 
     @org.springframework.beans.factory.annotation.Autowired
     public VideoService(VideoRepository videoRepository, 
@@ -40,12 +42,14 @@ public class VideoService {
                         @Value("${file.upload-dir}") String uploadDir, 
                         jakarta.persistence.EntityManager entityManager,
                         com.streamhub.notification.service.NotificationService notificationService,
-                        com.streamhub.watchhistory.repository.VideoViewEventRepository videoViewEventRepository) {
+                        com.streamhub.watchhistory.repository.VideoViewEventRepository videoViewEventRepository,
+                        UploadValidatorChain uploadValidatorChain) {
         this.videoRepository = videoRepository;
         this.categoryRepository = categoryRepository;
         this.entityManager = entityManager;
         this.notificationService = notificationService;
         this.videoViewEventRepository = videoViewEventRepository;
+        this.uploadValidatorChain = uploadValidatorChain;
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.thumbnailStorageLocation = Paths.get(uploadDir, "thumbnails").toAbsolutePath().normalize();
         
@@ -61,8 +65,17 @@ public class VideoService {
                         CategoryRepository categoryRepository, 
                         String uploadDir, 
                         jakarta.persistence.EntityManager entityManager,
+                        com.streamhub.notification.service.NotificationService notificationService,
+                        com.streamhub.watchhistory.repository.VideoViewEventRepository videoViewEventRepository) {
+        this(videoRepository, categoryRepository, uploadDir, entityManager, notificationService, videoViewEventRepository, new UploadValidatorChain());
+    }
+
+    public VideoService(VideoRepository videoRepository, 
+                        CategoryRepository categoryRepository, 
+                        String uploadDir, 
+                        jakarta.persistence.EntityManager entityManager,
                         com.streamhub.notification.service.NotificationService notificationService) {
-        this(videoRepository, categoryRepository, uploadDir, entityManager, notificationService, null);
+        this(videoRepository, categoryRepository, uploadDir, entityManager, notificationService, null, new UploadValidatorChain());
     }
 
     //central access check enforcing video privacy and moderation visibility
@@ -108,27 +121,7 @@ public class VideoService {
     }
 
     public VideoResponseDTO uploadVideo(String title, String description, UUID categoryId, MultipartFile file, MultipartFile thumbnail, User owner, String privacy, Integer durationSeconds) {
-        if (file.isEmpty() || thumbnail.isEmpty()) {
-            throw new IllegalArgumentException("Cannot upload empty file or thumbnail");
-        }
-
-        if (file.getSize() > 100 * 1024 * 1024) { //100mb max file size
-            throw new IllegalArgumentException("Video file size exceeds 100MB limit");
-        }
-
-        if (thumbnail.getSize() > 2 * 1024 * 1024) { //2mb max file size
-            throw new IllegalArgumentException("Thumbnail file size exceeds 2MB limit");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("video/")) {
-            throw new IllegalArgumentException("Invalid file type. Only video files are allowed");
-        }
-
-        String thumbContentType = thumbnail.getContentType();
-        if (thumbContentType == null || (!thumbContentType.equals("image/jpeg") && !thumbContentType.equals("image/png") && !thumbContentType.equals("image/webp"))) {
-            throw new IllegalArgumentException("Invalid thumbnail type. Only jpg, png, and webp are allowed");
-        }
+        uploadValidatorChain.validate(file, thumbnail);
 
         String originalFilename = file.getOriginalFilename();
         String fileExtension = "";
