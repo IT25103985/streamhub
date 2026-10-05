@@ -1,3 +1,5 @@
+import { getToken } from '../api/axiosInstance';
+
 //in-memory cache for resolved video durations
 const durationCache = new Map();
 const pendingRequests = new Map();
@@ -33,7 +35,8 @@ export const getVideoDuration = (videoId) => {
   const promise = new Promise((resolve) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
-    video.src = `http://localhost:8081/api/v1/videos/${key}/stream`;
+    const token = getToken();
+    video.src = `http://localhost:8081/api/v1/videos/${key}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     const cleanup = () => {
       video.removeAttribute('src');

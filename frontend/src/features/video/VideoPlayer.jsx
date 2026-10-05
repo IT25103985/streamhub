@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import axiosInstance from '../../api/axiosInstance';
+import axiosInstance, { getToken } from '../../api/axiosInstance';
 import './VideoPlayer.css';
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4];
@@ -348,7 +348,8 @@ const VideoPlayer = ({
 
   if (!videoId) return null;
 
-  const streamUrl = `${axiosInstance.defaults.baseURL}/videos/${videoId}/stream`;
+  const token = getToken();
+  const streamUrl = `${axiosInstance.defaults.baseURL}/videos/${videoId}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   const playedPercentage = duration > 0 ? (isDraggingSeek ? dragProgress : (currentTime / duration) * 100) : 0;
 
   return (
