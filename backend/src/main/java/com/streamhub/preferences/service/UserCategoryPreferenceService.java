@@ -62,8 +62,10 @@ public class UserCategoryPreferenceService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        if (distinctCategoryIds.size() < 3) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least 3 distinct category preferences are required");
+        int totalAvailableCategories = (int) categoryRepository.count();
+        int minRequired = Math.min(3, totalAvailableCategories);
+        if (distinctCategoryIds.size() < minRequired || (minRequired > 0 && distinctCategoryIds.isEmpty())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least " + minRequired + " distinct category preference(s) are required");
         }
 
         List<Category> categories = new ArrayList<>();

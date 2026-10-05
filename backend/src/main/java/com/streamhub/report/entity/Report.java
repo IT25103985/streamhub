@@ -84,6 +84,21 @@ public class Report {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
+    //returns the state object corresponding to the current status
+    public com.streamhub.report.state.ReportState getCurrentState() {
+        return com.streamhub.report.state.ReportStateFactory.getState(this.status);
+    }
+
+    //transitions the report lifecycle state executing exit and entry hooks
+    public void transitionTo(com.streamhub.report.state.ReportState targetState) {
+        if (targetState == null) return;
+        com.streamhub.report.state.ReportState current = getCurrentState();
+        if (current != null) {
+            current.onExit(this);
+        }
+        targetState.onEnter(this);
+    }
+
     public User getModerator() { return moderator; }
     public void setModerator(User moderator) { this.moderator = moderator; }
 
@@ -99,3 +114,4 @@ public class Report {
     public LocalDateTime getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
 }
+

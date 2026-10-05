@@ -12,11 +12,11 @@ const InterestsModal = ({ onSuccess }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    //fetch available categories for user selection
+    //fetch available categories that have at least one video
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const res = await axiosInstance.get('/categories');
+        const res = await axiosInstance.get('/categories?hasVideos=true');
         const list = Array.isArray(res.data) ? res.data : res.data?.content || [];
         setCategories(list);
       } catch (err) {
@@ -53,9 +53,13 @@ const InterestsModal = ({ onSuccess }) => {
     }
   };
 
+  const minRequired = Math.min(3, categories.length);
+  const selectedCount = selectedCategoryIds.length;
+  const isReady = minRequired > 0 ? selectedCount >= minRequired : true;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedCategoryIds.length < 3 || submitting) return;
+    if ((minRequired > 0 && selectedCategoryIds.length < minRequired) || submitting) return;
 
     try {
       setSubmitting(true);
@@ -77,9 +81,6 @@ const InterestsModal = ({ onSuccess }) => {
       setSubmitting(false);
     }
   };
-
-  const selectedCount = selectedCategoryIds.length;
-  const isReady = selectedCount >= 3;
 
   return (
     <div className="interests-modal-overlay">
@@ -111,6 +112,10 @@ const InterestsModal = ({ onSuccess }) => {
             <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-dim)' }}>
               Loading categories...
             </div>
+          ) : categories.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-dim)' }}>
+              No categories with videos available yet.
+            </div>
           ) : (
             <div className="interests-grid">
               {categories.map((cat) => {
@@ -141,13 +146,17 @@ const InterestsModal = ({ onSuccess }) => {
         <div className="interests-modal-footer">
           <div className="interests-progress-bar">
             <span>
-              {isReady
+              {categories.length === 0
+                ? 'No categories available right now.'
+                : isReady
                 ? 'Great choices!'
-                : `Pick at least ${3 - selectedCount} more ${3 - selectedCount === 1 ? 'category' : 'categories'}`}
+                : `Pick at least ${minRequired - selectedCount} more ${minRequired - selectedCount === 1 ? 'category' : 'categories'}`}
             </span>
-            <span className="interests-count-badge">
-              {selectedCount} / 3 selected
-            </span>
+            {categories.length > 0 && (
+              <span className="interests-count-badge">
+                {selectedCount} / {minRequired} selected
+              </span>
+            )}
           </div>
 
           <button

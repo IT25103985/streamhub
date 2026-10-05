@@ -8,6 +8,8 @@ import com.streamhub.playlist.repository.PlaylistRepository;
 import com.streamhub.report.dto.*;
 import com.streamhub.report.entity.Report;
 import com.streamhub.report.repository.ReportRepository;
+import com.streamhub.report.state.ReportState;
+import com.streamhub.report.state.ReportStateFactory;
 import com.streamhub.social.entity.Comment;
 import com.streamhub.social.repository.CommentRepository;
 import com.streamhub.social.service.SocialService;
@@ -124,11 +126,9 @@ public class ReportService {
     public ReportResponse updateReportStatus(UUID reportId, String newStatus) {
         Report report = reportRepository.findById(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
-        //status transition validation placeholder
-        report.setStatus(newStatus);
-        if ("RESOLVED".equals(newStatus)) {
-            report.setResolvedAt(LocalDateTime.now());
-        }
+        // status changes are routed through the report state objects
+        ReportState targetState = ReportStateFactory.getState(newStatus);
+        report.transitionTo(targetState);
         Report savedReport = reportRepository.save(report);
         String previewText = getPreviewText(savedReport);
 
@@ -220,11 +220,10 @@ public class ReportService {
                 break;
         }
 
-        report.setStatus("RESOLVED");
+        report.transitionTo(ReportStateFactory.getResolvedState());
         report.setModerator(moderator);
         report.setModeratorAction(action);
         report.setActionReason(request.getActionReason());
-        report.setResolvedAt(LocalDateTime.now());
 
         Report savedReport = reportRepository.save(report);
         String previewText = getPreviewText(savedReport);
@@ -344,7 +343,7 @@ public class ReportService {
                 ? request.getReason().trim()
                 : "Moderation action was reversed after review";
 
-        report.setStatus("PENDING");
+        report.transitionTo(ReportStateFactory.getPendingState());
         report.setModerator(moderator);
         report.setModeratorAction(null);
         report.setActionReason("Action reversed: " + reason);

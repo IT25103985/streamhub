@@ -25,14 +25,27 @@ public class CategoryService {
         this.videoRepository = videoRepository;
     }
 
-    //retrieves and sorts list of all categories matching search term
+    //retrieves and sorts list of all categories matching search term and optional hasVideos filter
     @Transactional(readOnly = true)
     public List<CategoryDto> getAllCategories(String search) {
+        return getAllCategories(search, false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getAllCategories(String search, boolean hasVideos) {
         List<Category> categories;
-        if (search != null && !search.trim().isEmpty()) {
-            categories = categoryRepository.findByNameContainingIgnoreCase(search.trim());
+        if (hasVideos) {
+            if (search != null && !search.trim().isEmpty()) {
+                categories = categoryRepository.findCategoriesWithPublicVideosAndSearch(search.trim());
+            } else {
+                categories = categoryRepository.findCategoriesWithPublicVideos();
+            }
         } else {
-            categories = categoryRepository.findAll();
+            if (search != null && !search.trim().isEmpty()) {
+                categories = categoryRepository.findByNameContainingIgnoreCase(search.trim());
+            } else {
+                categories = categoryRepository.findAll();
+            }
         }
         
         return categories.stream()

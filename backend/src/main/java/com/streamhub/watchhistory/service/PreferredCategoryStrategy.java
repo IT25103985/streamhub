@@ -15,21 +15,18 @@ import java.util.UUID;
 //cold start recommendation strategy using onboarding category preferences
 public class PreferredCategoryStrategy implements RecommendationStrategy {
 
-    public static final int MIN_VIEWS_FOR_RECOMMENDATION = 10;
+    public static final int MIN_VIEWS_FOR_RECOMMENDATION = 0;
 
     private final UserCategoryPreferenceRepository userCategoryPreferenceRepository;
     private final VideoRepository videoRepository;
-    private final TrendingFallbackStrategy trendingFallbackStrategy;
 
     public PreferredCategoryStrategy(UserCategoryPreferenceRepository userCategoryPreferenceRepository,
-                                     VideoRepository videoRepository,
-                                     TrendingFallbackStrategy trendingFallbackStrategy) {
+                                     VideoRepository videoRepository) {
         this.userCategoryPreferenceRepository = userCategoryPreferenceRepository;
         this.videoRepository = videoRepository;
-        this.trendingFallbackStrategy = trendingFallbackStrategy;
     }
 
-    //recommends videos matching user onboarding categories backfilling with trending
+    //recommends videos strictly matching user onboarding categories ordered by most viewed
     @Override
     public List<Video> getRecommendations(User user, int limit) {
         if (user == null) {
@@ -42,7 +39,7 @@ public class PreferredCategoryStrategy implements RecommendationStrategy {
         }
 
         List<Video> results = new ArrayList<>();
-        //query public videos across preferred categories meeting minimum view count (>= 10)
+        //query public videos across preferred categories ordered by view count desc
         List<Video> rawResults = videoRepository.findPublicVideosByCategoriesWithMinViews(
                 preferredCategoryIds,
                 MIN_VIEWS_FOR_RECOMMENDATION,
@@ -50,21 +47,8 @@ public class PreferredCategoryStrategy implements RecommendationStrategy {
         );
         if (rawResults != null) {
             for (Video v : rawResults) {
-                if (v != null && v.getViewCount() >= MIN_VIEWS_FOR_RECOMMENDATION && !isOwnVideo(user, v)) {
+                if (v != null && !isOwnVideo(user, v) && results.size() < limit) {
                     results.add(v);
-                }
-            }
-        }
-
-        //backfill with platform trending if qualifying preferred videos are fewer than requested limit
-        if (results.size() < limit) {
-            List<Video> trending = trendingFallbackStrategy.getRecommendations(user, limit);
-            if (trending != null) {
-                for (Video v : trending) {
-                    if (!results.contains(v) && !v.isHidden() && (v.getPrivacy() == null || "PUBLIC".equalsIgnoreCase(v.getPrivacy())) 
-                            && v.getViewCount() >= MIN_VIEWS_FOR_RECOMMENDATION && !isOwnVideo(user, v) && results.size() < limit) {
-                        results.add(v);
-                    }
                 }
             }
         }

@@ -24,10 +24,12 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
-    //retrieves all video categories with optional search filtering
+    //retrieves all video categories with optional search and hasVideos filtering
     @GetMapping
-    public ResponseEntity<List<CategoryDto>> getAllCategories(@RequestParam(required = false) String search) {
-        return ResponseEntity.ok(categoryService.getAllCategories(search));
+    public ResponseEntity<List<CategoryDto>> getAllCategories(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "false") boolean hasVideos) {
+        return ResponseEntity.ok(categoryService.getAllCategories(search, hasVideos));
     }
 
     @GetMapping("/{id}")
