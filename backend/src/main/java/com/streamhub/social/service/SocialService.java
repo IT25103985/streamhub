@@ -1,18 +1,22 @@
 package com.streamhub.social.service;
 
 import com.streamhub.common.entity.User;
-import com.streamhub.notification.service.NotificationService;
 import com.streamhub.social.dto.CommentDTO;
 import com.streamhub.social.dto.CreateCommentDTO;
 import com.streamhub.social.dto.LikeStatusDTO;
 import com.streamhub.social.entity.Comment;
 import com.streamhub.social.entity.Like;
 import com.streamhub.social.entity.Dislike;
+import com.streamhub.social.event.CommentCreatedEvent;
+import com.streamhub.social.event.CommentLikedEvent;
+import com.streamhub.social.event.CommentRepliedEvent;
+import com.streamhub.social.event.VideoLikedEvent;
 import com.streamhub.social.repository.CommentRepository;
 import com.streamhub.social.repository.LikeRepository;
 import com.streamhub.social.repository.DislikeRepository;
 import com.streamhub.video.entity.Video;
 import com.streamhub.video.repository.VideoRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +38,7 @@ public class SocialService {
     private final LikeRepository likeRepository;
     private final DislikeRepository dislikeRepository;
     private final VideoRepository videoRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final com.streamhub.social.repository.CommentLikeRepository commentLikeRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -42,13 +46,13 @@ public class SocialService {
                          LikeRepository likeRepository, 
                          DislikeRepository dislikeRepository, 
                          VideoRepository videoRepository,
-                         NotificationService notificationService,
+                         ApplicationEventPublisher eventPublisher,
                          com.streamhub.social.repository.CommentLikeRepository commentLikeRepository) {
         this.commentRepository = commentRepository;
         this.likeRepository = likeRepository;
         this.dislikeRepository = dislikeRepository;
         this.videoRepository = videoRepository;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.commentLikeRepository = commentLikeRepository;
     }
 
@@ -97,23 +101,19 @@ public class SocialService {
 
         Comment saved = commentRepository.save(comment);
 
-        if (notificationService != null && user != null) {
+        if (eventPublisher != null && user != null) {
             String commentPreview = trimmedText.length() > 60 ? trimmedText.substring(0, 57) + "..." : trimmedText;
 
             // Notify video owner if another user commented on their video
             if (video.getOwner() != null && !video.getOwner().getUserId().equals(user.getUserId())) {
-                try {
-                    notificationService.createNotification(
+                eventPublisher.publishEvent(new CommentCreatedEvent(
+                        video.getVideoId(),
+                        video.getTitle(),
+                        user.getUserId(),
+                        user.getUsername(),
                         video.getOwner().getUserId(),
-                        "COMMENT",
-                        "New Comment on Your Video",
-                        user.getUsername() + " commented on your video \"" + video.getTitle() + "\": \"" + commentPreview + "\"",
-                        "VIDEO",
-                        video.getVideoId()
-                    );
-                } catch (Exception e) {
-                    System.err.println("Failed to send comment notification: " + e.getMessage());
-                }
+                        commentPreview
+                ));
             }
 
             // Notify parent comment author if someone replied to their comment
@@ -121,18 +121,14 @@ public class SocialService {
                 UUID parentAuthorId = parent.getAuthor().getUserId();
                 UUID videoOwnerId = video.getOwner() != null ? video.getOwner().getUserId() : null;
                 if (!parentAuthorId.equals(user.getUserId()) && !parentAuthorId.equals(videoOwnerId)) {
-                    try {
-                        notificationService.createNotification(
+                    eventPublisher.publishEvent(new CommentRepliedEvent(
+                            video.getVideoId(),
+                            video.getTitle(),
+                            user.getUserId(),
+                            user.getUsername(),
                             parentAuthorId,
-                            "COMMENT_REPLY",
-                            "New Reply to Your Comment",
-                            user.getUsername() + " replied to your comment on \"" + video.getTitle() + "\": \"" + commentPreview + "\"",
-                            "VIDEO",
-                            video.getVideoId()
-                        );
-                    } catch (Exception e) {
-                        System.err.println("Failed to send comment reply notification: " + e.getMessage());
-                    }
+                            commentPreview
+                    ));
                 }
             }
         }
@@ -247,20 +243,15 @@ public class SocialService {
             Like like = new Like(video, user);
             likeRepository.save(like);
 
-            if (notificationService != null && video.getOwner() != null && user != null 
+            if (eventPublisher != null && video.getOwner() != null && user != null 
                     && !video.getOwner().getUserId().equals(user.getUserId())) {
-                try {
-                    notificationService.createNotification(
-                        video.getOwner().getUserId(),
-                        "LIKE",
-                        "New Like on Your Video",
-                        user.getUsername() + " liked your video \"" + video.getTitle() + "\".",
-                        "VIDEO",
-                        video.getVideoId()
-                    );
-                } catch (Exception e) {
-                    System.err.println("Failed to send like notification: " + e.getMessage());
-                }
+                eventPublisher.publishEvent(new VideoLikedEvent(
+                        video.getVideoId(),
+                        video.getTitle(),
+                        user.getUserId(),
+                        user.getUsername(),
+                        video.getOwner().getUserId()
+                ));
             }
         }
 
@@ -343,20 +334,15 @@ public class SocialService {
             com.streamhub.social.entity.CommentLike like = new com.streamhub.social.entity.CommentLike(comment, user);
             commentLikeRepository.save(like);
 
-            if (notificationService != null && comment.getAuthor() != null && user != null 
+            if (eventPublisher != null && comment.getAuthor() != null && user != null 
                     && !comment.getAuthor().getUserId().equals(user.getUserId())) {
-                try {
-                    notificationService.createNotification(
-                        comment.getAuthor().getUserId(),
-                        "COMMENT_LIKE",
-                        "New Like on Your Comment",
-                        user.getUsername() + " liked your comment on \"" + comment.getVideo().getTitle() + "\".",
-                        "COMMENT",
-                        comment.getCommentId()
-                    );
-                } catch (Exception e) {
-                    System.err.println("Failed to send comment like notification: " + e.getMessage());
-                }
+                eventPublisher.publishEvent(new CommentLikedEvent(
+                        comment.getCommentId(),
+                        comment.getVideo().getTitle(),
+                        user.getUserId(),
+                        user.getUsername(),
+                        comment.getAuthor().getUserId()
+                ));
             }
         }
 
@@ -376,20 +362,15 @@ public class SocialService {
             Like like = new Like(video, user);
             likeRepository.saveAndFlush(like);
 
-            if (notificationService != null && video.getOwner() != null && user != null 
+            if (eventPublisher != null && video.getOwner() != null && user != null 
                     && !video.getOwner().getUserId().equals(user.getUserId())) {
-                try {
-                    notificationService.createNotification(
-                        video.getOwner().getUserId(),
-                        "LIKE",
-                        "New Like on Your Video",
-                        user.getUsername() + " liked your video \"" + video.getTitle() + "\".",
-                        "VIDEO",
-                        video.getVideoId()
-                    );
-                } catch (Exception e) {
-                    System.err.println("Failed to send like notification: " + e.getMessage());
-                }
+                eventPublisher.publishEvent(new VideoLikedEvent(
+                        video.getVideoId(),
+                        video.getTitle(),
+                        user.getUserId(),
+                        user.getUsername(),
+                        video.getOwner().getUserId()
+                ));
             }
         } catch (DataIntegrityViolationException ex) {
             throw new IllegalStateException("User already liked this video");

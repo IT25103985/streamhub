@@ -1,13 +1,13 @@
 package com.streamhub.playlist.service;
 
 import com.streamhub.common.entity.User;
-import com.streamhub.notification.service.NotificationService;
 import com.streamhub.playlist.dto.CreatePlaylistDTO;
 import com.streamhub.playlist.dto.PlaylistDetailDTO;
 import com.streamhub.playlist.dto.PlaylistResponseDTO;
 import com.streamhub.playlist.dto.UpdatePlaylistDTO;
 import com.streamhub.playlist.entity.Playlist;
 import com.streamhub.playlist.entity.PlaylistVideo;
+import com.streamhub.playlist.event.PlaylistVideoAddedEvent;
 import com.streamhub.playlist.repository.PlaylistRepository;
 import com.streamhub.playlist.repository.PlaylistVideoRepository;
 import com.streamhub.video.dto.VideoResponseDTO;
@@ -15,6 +15,7 @@ import com.streamhub.video.entity.Video;
 import com.streamhub.video.repository.VideoRepository;
 import com.streamhub.auth.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,7 +37,7 @@ public class PlaylistService {
     private final PlaylistVideoRepository playlistVideoRepository;
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Path coverStorageLocation;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -44,13 +45,13 @@ public class PlaylistService {
                            PlaylistVideoRepository playlistVideoRepository, 
                            VideoRepository videoRepository,
                            UserRepository userRepository,
-                           NotificationService notificationService,
+                           ApplicationEventPublisher eventPublisher,
                            @Value("${file.playlist-cover-upload-dir:uploads/playlist-covers}") String coverUploadDir) {
         this.playlistRepository = playlistRepository;
         this.playlistVideoRepository = playlistVideoRepository;
         this.videoRepository = videoRepository;
         this.userRepository = userRepository;
-        this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
         this.coverStorageLocation = Paths.get(coverUploadDir).toAbsolutePath().normalize();
 
         try {
@@ -203,22 +204,19 @@ public class PlaylistService {
         PlaylistVideo playlistVideo = new PlaylistVideo(playlist, video, position);
         playlistVideoRepository.save(playlistVideo);
 
-        // Notify video owner if another user adds their video to a public playlist
-        if (notificationService != null && "PUBLIC".equalsIgnoreCase(playlist.getPrivacy()) 
+        // Publish event to notify video owner if another user adds their video to a public playlist
+        if (eventPublisher != null && "PUBLIC".equalsIgnoreCase(playlist.getPrivacy()) 
                 && video.getOwner() != null && currentUser != null 
                 && !video.getOwner().getUserId().equals(currentUser.getUserId())) {
-            try {
-                notificationService.createNotification(
-                    video.getOwner().getUserId(),
-                    "PLAYLIST_ADD",
-                    "Video Added to Public Playlist",
-                    currentUser.getUsername() + " added your video \"" + video.getTitle() + "\" to the public playlist \"" + playlist.getName() + "\".",
-                    "PLAYLIST",
-                    playlist.getPlaylistId()
-                );
-            } catch (Exception e) {
-                System.err.println("Failed to send playlist notification: " + e.getMessage());
-            }
+            eventPublisher.publishEvent(new PlaylistVideoAddedEvent(
+                    playlist.getPlaylistId(),
+                    playlist.getName(),
+                    video.getVideoId(),
+                    video.getTitle(),
+                    currentUser.getUserId(),
+                    currentUser.getUsername(),
+                    video.getOwner().getUserId()
+            ));
         }
     }
 
