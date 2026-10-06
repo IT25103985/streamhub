@@ -182,8 +182,12 @@ public class FollowServiceTest {
             }
         };
 
-        com.streamhub.settings.service.UserSettingsService userSettingsService = org.mockito.Mockito.mock(com.streamhub.settings.service.UserSettingsService.class);
-        org.mockito.Mockito.when(userSettingsService.getOrCreate(org.mockito.ArgumentMatchers.any())).thenReturn(new com.streamhub.settings.entity.UserSettings());
+        com.streamhub.settings.service.UserSettingsService userSettingsService = new com.streamhub.settings.service.UserSettingsService(null, null) {
+            @Override
+            public com.streamhub.settings.entity.UserSettings getOrCreate(java.util.UUID userId) {
+                return new com.streamhub.settings.entity.UserSettings();
+            }
+        };
         notificationService = new NotificationService(notificationRepository, entityManager, userSettingsService, messagingTemplate);
 
         followService = new FollowService(followRepository, userRepository, notificationService, messagingTemplate);

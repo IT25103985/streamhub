@@ -5,6 +5,7 @@ import com.streamhub.common.entity.User;
 import com.streamhub.video.dto.VideoResponseDTO;
 import com.streamhub.watchhistory.dto.WatchEventRequestDTO;
 import com.streamhub.watchhistory.dto.WatchHistoryResponseDTO;
+import com.streamhub.watchhistory.entity.WatchHistory;
 import com.streamhub.watchhistory.service.WatchHistoryService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -35,19 +37,23 @@ public class WatchHistoryController {
         return userRepository.findByUsername(principal.getName()).orElse(null);
     }
 
-    //watch history event recording endpoint
+    //watch history event recording endpoint, returns row id for session reuse
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    //records or updates playback timestamp for user history
-    public ResponseEntity<Void> recordWatchEvent(
+    public ResponseEntity<Map<String, String>> recordWatchEvent(
             Principal principal,
             @Valid @RequestBody WatchEventRequestDTO request) {
         User user = getAuthenticatedUser(principal);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        watchHistoryService.recordWatchHistory(user, request.getVideoId(), request.getPositionSeconds());
-        return ResponseEntity.ok().build();
+        WatchHistory saved = watchHistoryService.recordWatchHistory(
+                user, request.getVideoId(), request.getPositionSeconds(), request.getWatchHistoryId());
+        if (saved == null) {
+            //watch history disabled in settings
+            return ResponseEntity.ok(Map.of());
+        }
+        return ResponseEntity.ok(Map.of("watchHistoryId", saved.getId().toString()));
     }
 
     //records playback progress for video with optional duration
@@ -91,17 +97,17 @@ public class WatchHistoryController {
         return ResponseEntity.noContent().build();
     }
 
-    //removes specific video from user watch history
-    @DeleteMapping("/{videoId}")
+    //removes a single watch history row by its id
+    @DeleteMapping("/{watchHistoryId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> removeVideoFromHistory(
+    public ResponseEntity<Void> removeHistoryItem(
             Principal principal,
-            @PathVariable UUID videoId) {
+            @PathVariable UUID watchHistoryId) {
         User user = getAuthenticatedUser(principal);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        watchHistoryService.deleteSingleHistory(user, videoId);
+        watchHistoryService.deleteSingleHistory(user, watchHistoryId);
         return ResponseEntity.noContent().build();
     }
 

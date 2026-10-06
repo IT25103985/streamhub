@@ -11,6 +11,9 @@ public class WatchEventRequestDTO {
 
     private Integer positionSeconds;
 
+    //optional row id from first call, skips latestRow lookup on heartbeats
+    private UUID watchHistoryId;
+
     public WatchEventRequestDTO() {}
 
     public WatchEventRequestDTO(UUID videoId, Integer positionSeconds) {
@@ -32,5 +35,13 @@ public class WatchEventRequestDTO {
 
     public void setPositionSeconds(Integer positionSeconds) {
         this.positionSeconds = positionSeconds;
+    }
+
+    public UUID getWatchHistoryId() {
+        return watchHistoryId;
+    }
+
+    public void setWatchHistoryId(UUID watchHistoryId) {
+        this.watchHistoryId = watchHistoryId;
     }
 }

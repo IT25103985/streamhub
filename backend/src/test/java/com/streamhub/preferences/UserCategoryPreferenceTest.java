@@ -59,6 +59,8 @@ public class UserCategoryPreferenceTest {
         cat1 = UUID.randomUUID();
         cat2 = UUID.randomUUID();
         cat3 = UUID.randomUUID();
+
+        lenient().when(categoryRepository.count()).thenReturn(10L);
     }
 
     @Test

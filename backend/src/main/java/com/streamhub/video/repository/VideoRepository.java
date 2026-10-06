@@ -33,6 +33,9 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
     @org.springframework.data.jpa.repository.Query("SELECT v FROM Video v WHERE v.category.id IN :categoryIds AND (v.isHidden = false OR v.isHidden IS NULL) AND (UPPER(v.privacy) = 'PUBLIC' OR v.privacy IS NULL) AND v.viewCount >= :minViews ORDER BY v.viewCount DESC, v.createdAt ASC")
     List<Video> findPublicVideosByCategoriesWithMinViews(@org.springframework.data.repository.query.Param("categoryIds") java.util.Collection<UUID> categoryIds, @org.springframework.data.repository.query.Param("minViews") int minViews, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.Query("SELECT v FROM Video v WHERE v.category.id IN :categoryIds AND v.owner.userId <> :excludeUserId AND (v.isHidden = false OR v.isHidden IS NULL) AND (UPPER(v.privacy) = 'PUBLIC' OR v.privacy IS NULL) AND v.viewCount >= :minViews ORDER BY v.viewCount DESC, v.createdAt ASC")
+    List<Video> findEligibleVideosByCategories(@org.springframework.data.repository.query.Param("categoryIds") java.util.Collection<UUID> categoryIds, @org.springframework.data.repository.query.Param("excludeUserId") UUID excludeUserId, @org.springframework.data.repository.query.Param("minViews") int minViews, Pageable pageable);
+
     List<Video> findByCategory_IdOrderByViewCountDesc(UUID categoryId, Pageable pageable);
     List<Video> findByOrderByViewCountDesc(Pageable pageable);
     List<Video> findByCategory_IdAndIsHiddenFalseOrderByViewCountDesc(UUID categoryId, Pageable pageable);

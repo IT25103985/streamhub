@@ -9,9 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "watch_history", uniqueConstraints = {
-    @UniqueConstraint(name = "UQ_watch_history_User_Video", columnNames = {"user_id", "video_id"})
-})
+@Table(name = "watch_history")
 //database entity tracking user video watch progress and timestamp
 public class WatchHistory {
 
@@ -106,5 +104,9 @@ public class WatchHistory {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }
