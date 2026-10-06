@@ -1,21 +1,30 @@
 package com.streamhub.watchhistory.service;
 
+import com.streamhub.auth.repository.UserRepository;
 import com.streamhub.common.entity.User;
 import com.streamhub.common.exception.ResourceNotFoundException;
+import com.streamhub.settings.entity.UserSettings;
+import com.streamhub.settings.service.UserSettingsService;
 import com.streamhub.video.dto.VideoResponseDTO;
 import com.streamhub.video.entity.Video;
 import com.streamhub.video.repository.VideoRepository;
 import com.streamhub.watchhistory.dto.WatchHistoryResponseDTO;
 import com.streamhub.watchhistory.entity.WatchHistory;
 import com.streamhub.watchhistory.repository.WatchHistoryRepository;
-import com.streamhub.settings.service.UserSettingsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,54 +32,113 @@ import java.util.stream.Collectors;
 //service tracking playback position and computing personalized recommendations
 public class WatchHistoryService {
 
-    //threshold of distinct videos watched before switching from onboarding preferences to behavioral affinity
-    public static final int MIN_WATCHED_FOR_BEHAVIORAL = 10;
-    //threshold in days to consider an account as new for onboarding recommendation isolation
-    public static final int NEW_ACCOUNT_DAYS_THRESHOLD = 7;
+    public static final int MAX_RECOMMENDATIONS = 3;
+    private static final long CYCLE_SECONDS = 7L * 24 * 3600;
+    private static final ZoneId COLOMBO = ZoneId.of("Asia/Colombo");
 
     private final WatchHistoryRepository watchHistoryRepository;
     private final VideoRepository videoRepository;
-    private final CategoryAffinityStrategy categoryAffinityStrategy;
+    private final UserRepository userRepository;
     private final PreferredCategoryStrategy preferredCategoryStrategy;
+    private final HistoryBasedStrategy historyBasedStrategy;
     private final TrendingFallbackStrategy trendingFallbackStrategy;
-
     private final UserSettingsService userSettingsService;
+    private final Clock clock;
 
     public WatchHistoryService(WatchHistoryRepository watchHistoryRepository,
                                VideoRepository videoRepository,
-                               CategoryAffinityStrategy categoryAffinityStrategy,
+                               UserRepository userRepository,
                                PreferredCategoryStrategy preferredCategoryStrategy,
+                               HistoryBasedStrategy historyBasedStrategy,
                                TrendingFallbackStrategy trendingFallbackStrategy,
-                               UserSettingsService userSettingsService) {
+                               UserSettingsService userSettingsService,
+                               Clock clock) {
         this.watchHistoryRepository = watchHistoryRepository;
         this.videoRepository = videoRepository;
-        this.categoryAffinityStrategy = categoryAffinityStrategy;
+        this.userRepository = userRepository;
         this.preferredCategoryStrategy = preferredCategoryStrategy;
+        this.historyBasedStrategy = historyBasedStrategy;
         this.trendingFallbackStrategy = trendingFallbackStrategy;
         this.userSettingsService = userSettingsService;
+        this.clock = clock;
+    }
+
+    //converts a server local datetime to the calendar date in asia/colombo
+    private LocalDate toColomboDate(LocalDateTime dateTime) {
+        if (dateTime == null) return null;
+        return dateTime.atZone(ZoneId.systemDefault())
+                .withZoneSameInstant(COLOMBO)
+                .toLocalDate();
+    }
+
+    //today in asia/colombo using injected clock
+    private LocalDate todayColombo() {
+        return LocalDate.now(clock.withZone(COLOMBO));
     }
 
     @Transactional
-    //watch history tracking logic
-    public void recordWatchHistory(User user, UUID videoId, Integer positionSeconds) {
-        if (user != null) {
-            com.streamhub.settings.entity.UserSettings settings = userSettingsService.getOrCreate(user.getUserId());
-            if (!settings.isWatchHistoryEnabled()) {
-                return;
-            }
+    //watch history tracking logic with per day deduplication
+    public WatchHistory recordWatchHistory(User user, UUID videoId, Integer positionSeconds, UUID existingRowId) {
+        if (user == null) {
+            return null;
         }
-        
+
+        UserSettings settings = userSettingsService.getOrCreate(user.getUserId());
+        if (!settings.isWatchHistoryEnabled()) {
+            return null;
+        }
+
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Video not found with id " + videoId));
 
         int pos = positionSeconds != null ? Math.max(0, positionSeconds) : 0;
 
-        WatchHistory watchHistory = watchHistoryRepository.findByUserAndVideo(user, video)
-                .orElseGet(() -> new WatchHistory(user, video, pos));
+        //fast path if frontend sent existing row id
+        if (existingRowId != null) {
+            Optional<WatchHistory> direct = watchHistoryRepository.findById(existingRowId);
+            if (direct.isPresent()) {
+                WatchHistory row = direct.get();
+                if (row.getUser().getUserId().equals(user.getUserId())
+                        && row.getVideo().getVideoId().equals(videoId)) {
+                    row.setLastPosition(pos);
+                    row.setWatchDurationSeconds(pos);
+                    row.setUpdatedAt(LocalDateTime.now(clock));
+                    return watchHistoryRepository.save(row);
+                }
+            }
+        }
 
-        watchHistory.setLastPosition(pos);
-        watchHistory.setWatchDurationSeconds(pos);
-        watchHistoryRepository.save(watchHistory);
+        //pessimistic lock on user row to serialize concurrent writes
+        userRepository.findByIdWithLock(user.getUserId());
+
+        //check if user already watched this video today
+        List<WatchHistory> existingForVideo = watchHistoryRepository
+                .findLatestByUserIdAndVideoId(user.getUserId(), videoId, PageRequest.of(0, 1));
+
+        LocalDate today = todayColombo();
+
+        if (!existingForVideo.isEmpty()) {
+            WatchHistory existingRow = existingForVideo.get(0);
+            if (today.equals(toColomboDate(existingRow.getUpdatedAt()))) {
+                //same video same day update in place and refresh timestamp
+                existingRow.setLastPosition(pos);
+                existingRow.setWatchDurationSeconds(pos);
+                existingRow.setUpdatedAt(LocalDateTime.now(clock));
+                return watchHistoryRepository.save(existingRow);
+            }
+        }
+
+        //different video or different day insert new row
+        WatchHistory newRow = new WatchHistory(user, video, pos);
+        newRow.setWatchDurationSeconds(pos);
+        newRow.setUpdatedAt(LocalDateTime.now(clock));
+        return watchHistoryRepository.save(newRow);
+    }
+
+    //overload for callers that do not pass a row id
+    @Transactional
+    public WatchHistory recordWatchHistory(User user, UUID videoId, Integer positionSeconds) {
+        return recordWatchHistory(user, videoId, positionSeconds, null);
     }
 
     //retrieves stored playback timestamp in seconds for a specific video
@@ -79,9 +147,13 @@ public class WatchHistoryService {
         if (user == null || videoId == null) {
             return 0;
         }
-        return watchHistoryRepository.findByUser_UserIdAndVideo_VideoId(user.getUserId(), videoId)
-                .map(WatchHistory::getLastPosition)
-                .orElse(0);
+        //read from the latest row for this user+video pair
+        List<WatchHistory> rows = watchHistoryRepository
+                .findLatestByUserIdAndVideoId(user.getUserId(), videoId, PageRequest.of(0, 1));
+        if (rows.isEmpty()) {
+            return 0;
+        }
+        return rows.get(0).getLastPosition();
     }
 
     //retrieves page of user watch history ordered by most recent
@@ -89,119 +161,91 @@ public class WatchHistoryService {
     public Page<WatchHistoryResponseDTO> getUserWatchHistory(User user, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<WatchHistory> historyPage = watchHistoryRepository.findByUserOrderByUpdatedAtDesc(user, pageable);
-        
         return historyPage.map(this::mapToResponseDTO);
     }
 
-    //deletes all playback history entries for user
+    //deletes all playback history entries for user and records clear timestamp
     @Transactional
     public void clearUserHistory(User user) {
-        if (user != null) {
-            watchHistoryRepository.deleteByUser(user);
+        if (user == null || user.getUserId() == null) {
+            return;
         }
+        //pessimistic lock on user row to serialize concurrent clears
+        userRepository.findByIdWithLock(user.getUserId());
+        watchHistoryRepository.deleteByUser(user);
+        userSettingsService.recordHistoryCleared(user.getUserId(), LocalDateTime.now(clock));
     }
 
-    //deletes single video entry from user watch history
+    //deletes single watch history row by its id
     @Transactional
-    public void deleteSingleHistory(User user, UUID videoId) {
-        if (user != null && videoId != null) {
-            watchHistoryRepository.deleteByUserAndVideo_VideoId(user, videoId);
+    public void deleteSingleHistory(User user, UUID watchHistoryId) {
+        if (user == null || watchHistoryId == null) return;
+        Optional<WatchHistory> row = watchHistoryRepository.findById(watchHistoryId);
+        if (row.isPresent() && row.get().getUser().getUserId().equals(user.getUserId())) {
+            watchHistoryRepository.deleteById(watchHistoryId);
         }
     }
 
     @Transactional(readOnly = true)
-    //recommendation calculation with behavioral preferred and trending strategy order
+    //recommends up to 3 videos based on 7 day cycle and watch history
     public List<VideoResponseDTO> getRecommendations(User user, int limit) {
-        if (user == null) {
-            return new java.util.ArrayList<>();
+        if (user == null || user.getUserId() == null || !user.isHasSetInterests()) {
+            return Collections.emptyList();
         }
 
-        int effectiveLimit = Math.min(limit, 4);
+        LocalDateTime now = LocalDateTime.now(clock);
 
-        long watchedCount = watchHistoryRepository.countDistinctWatchedVideosByUser(user);
-        boolean newAccount = isNewAccount(user);
+        //read only lookup without inserting rows
+        Optional<UserSettings> settingsOpt = userSettingsService.findByUserId(user.getUserId());
+        LocalDateTime clearedAt = settingsOpt.map(UserSettings::getHistoryClearedAt).orElse(null);
 
-        //gate fresh accounts with neither onboarding preferences nor behavioral history
-        if (!user.isHasSetInterests() && watchedCount < MIN_WATCHED_FOR_BEHAVIORAL) {
-            return new java.util.ArrayList<>();
+        //hide section for 7 days after history clear
+        if (clearedAt != null && now.isBefore(clearedAt.plusDays(7))) {
+            return Collections.emptyList();
         }
 
-        //if watch history was cleared (or 0 watched) on established accounts (> 7 days old), return empty
-        if (!newAccount && watchedCount == 0) {
-            return new java.util.ArrayList<>();
+        //anchor cycle to cleared timestamp or account creation
+        LocalDateTime baseTime = (clearedAt != null) ? clearedAt : user.getCreatedAt();
+        if (baseTime == null) {
+            baseTime = now;
         }
 
-        List<Video> recommendations = new java.util.ArrayList<>();
+        long diffSeconds = ChronoUnit.SECONDS.between(baseTime, now);
+        if (diffSeconds < 0) {
+            return Collections.emptyList();
+        }
 
-        if (newAccount && watchedCount < MIN_WATCHED_FOR_BEHAVIORAL) {
-            // New account (<= 7 days old) cold start: recommendations are strictly based on preferred categories (no trending fallback)
-            List<Video> primary = preferredCategoryStrategy.getRecommendations(user, effectiveLimit);
-            if (primary != null) {
-                for (Video v : primary) {
-                    if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < effectiveLimit) {
-                        recommendations.add(v);
-                    }
-                }
+        long cycleIndex = diffSeconds / CYCLE_SECONDS;
+        List<Video> videos;
+
+        if (cycleIndex == 0) {
+            if (clearedAt != null) {
+                return Collections.emptyList();
             }
+            //first cycle uses picked categories
+            videos = preferredCategoryStrategy.getRecommendations(user, MAX_RECOMMENDATIONS);
         } else {
-            // Established account (> 7 days old or has enough behavioral history):
-            List<Video> primary = (watchedCount >= MIN_WATCHED_FOR_BEHAVIORAL)
-                    ? categoryAffinityStrategy.getRecommendations(user, effectiveLimit)
-                    : preferredCategoryStrategy.getRecommendations(user, effectiveLimit);
+            LocalDateTime cycleStart = baseTime.plusSeconds(cycleIndex * CYCLE_SECONDS);
+            LocalDateTime windowStart = cycleStart.minusDays(7);
+            LocalDateTime windowEnd = cycleStart;
 
-            if (primary != null) {
-                for (Video v : primary) {
-                    if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < effectiveLimit) {
-                        recommendations.add(v);
-                    }
-                }
-            }
+            //later cycles derive top categories from watch history window
+            videos = historyBasedStrategy.getRecommendations(user, MAX_RECOMMENDATIONS, windowStart, windowEnd);
 
-            // Backfill with platform trending if slots remaining after preferred categories or behavioral affinity
-            if (recommendations.size() < effectiveLimit) {
-                List<Video> trending = trendingFallbackStrategy.getRecommendations(user, effectiveLimit);
-                if (trending != null) {
-                    for (Video v : trending) {
-                        if (isValidRecommendation(v, user) && !recommendations.contains(v) && recommendations.size() < effectiveLimit) {
-                            recommendations.add(v);
-                        }
-                    }
-                }
+            //fallback to picked categories only if user never cleared history
+            if ((videos == null || videos.isEmpty()) && clearedAt == null) {
+                videos = preferredCategoryStrategy.getRecommendations(user, MAX_RECOMMENDATIONS);
             }
         }
 
-        return recommendations.stream()
-                .filter(v -> isValidRecommendation(v, user))
-                .limit(effectiveLimit)
+        if (videos == null || videos.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return videos.stream()
+                .limit(MAX_RECOMMENDATIONS)
                 .map(this::mapVideoToDTO)
                 .collect(Collectors.toList());
-    }
-
-    public boolean isNewAccount(User user) {
-        if (user == null) return false;
-        if (user.getCreatedAt() == null) {
-            return true;
-        }
-        return user.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusDays(NEW_ACCOUNT_DAYS_THRESHOLD));
-    }
-
-    private boolean isValidRecommendation(Video video, User user) {
-        if (video == null || video.isHidden()) {
-            return false;
-        }
-        if (video.getPrivacy() != null && !"PUBLIC".equalsIgnoreCase(video.getPrivacy())) {
-            return false;
-        }
-        // Exclude user's own videos from recommendations
-        if (user != null && video.getOwner() != null) {
-            if (user.getUserId() != null && user.getUserId().equals(video.getOwner().getUserId())) {
-                return false;
-            }
-            if (user.getUsername() != null && user.getUsername().equalsIgnoreCase(video.getOwner().getUsername())) {
-                return false;
-            }
-        }
-        return true;
     }
 
     @Transactional(readOnly = true)

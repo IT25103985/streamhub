@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import watchHistoryService from './watchHistoryService';
 import { AuthContext, useRequireAuth } from '../../context/AuthContext';
+import { getSettings } from '../../api/settingsApi';
 import { Link } from 'react-router-dom';
 import { getFullImageUrl } from '../../utils/imageUtils';
 import VideoWatchPanel from '../video/VideoWatchPanel';
@@ -78,12 +79,20 @@ const WatchHistoryPage = () => {
     const [playlistModalVideoId, setPlaylistModalVideoId] = useState(null);
     const [reportModalVideoId, setReportModalVideoId] = useState(null);
 
+    const [isHistoryEnabled, setIsHistoryEnabled] = useState(true);
+
     const fetchHistory = async (isBackground = false) => {
         if (!user) return;
         try {
             if (!isBackground) setLoading(true);
-            const data = await watchHistoryService.getWatchHistory(0, 100);
-            setHistory(data.content || []);
+            const [historyData, settingsData] = await Promise.all([
+                watchHistoryService.getWatchHistory(0, 100).catch(() => ({ content: [] })),
+                getSettings().catch(() => null)
+            ]);
+            setHistory(historyData?.content || []);
+            if (settingsData && typeof settingsData.watchHistoryEnabled === 'boolean') {
+                setIsHistoryEnabled(settingsData.watchHistoryEnabled);
+            }
         } catch (err) {
             if (!isBackground) setError('Failed to load watch history');
             console.error(err);
@@ -135,17 +144,14 @@ const WatchHistoryPage = () => {
         }
     };
 
-    const handleRemoveItem = async (videoId, e) => {
+    const handleRemoveItem = async (watchHistoryId, e) => {
         if (e) e.stopPropagation();
         if (!window.confirm("Remove this video from your watch history?")) return;
 
         try {
-            await watchHistoryService.removeFromWatchHistory(videoId);
-            setHistory(prev => prev.filter(item => {
-                const id = item.video?.videoId || item.video?.id;
-                return id !== videoId;
-            }));
-            window.dispatchEvent(new CustomEvent('streamhub-video-update', { detail: { videoId } }));
+            await watchHistoryService.removeFromWatchHistory(watchHistoryId);
+            setHistory(prev => prev.filter(item => item.watchHistoryId !== watchHistoryId));
+            window.dispatchEvent(new CustomEvent('streamhub-video-update'));
         } catch (err) {
             console.error('Failed to remove item from history:', err);
             alert('Failed to remove item from history.');
@@ -200,6 +206,36 @@ const WatchHistoryPage = () => {
                     <span>Clear all watch history</span>
                 </button>
             </div>
+
+            {!isHistoryEnabled && (
+                <div style={{
+                    background: 'rgba(234, 179, 8, 0.12)',
+                    border: '1px solid rgba(234, 179, 8, 0.35)',
+                    color: '#facc15',
+                    padding: '12px 18px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontSize: '14px'
+                }}>
+                    <span>Watch history is paused in your settings. New videos you watch will not be recorded.</span>
+                    <Link to="/settings" style={{
+                        color: '#000',
+                        background: '#facc15',
+                        padding: '6px 14px',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        flexShrink: 0
+                    }}>
+                        Go to Settings
+                    </Link>
+                </div>
+            )}
 
             {error && (
                 <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '14px 18px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -329,7 +365,7 @@ const WatchHistoryPage = () => {
                                                             label: 'Remove from watch history', 
                                                             icon: ICONS.trash,
                                                             className: 'danger',
-                                                            onClick: (e) => handleRemoveItem(videoId, e)
+                                                            onClick: (e) => handleRemoveItem(item.watchHistoryId, e)
                                                         }
                                                     ]} 
                                                 />

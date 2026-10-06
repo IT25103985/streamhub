@@ -5,7 +5,7 @@ import VideoCard from '../../components/VideoCard';
 import VideoGridSkeleton from '../../components/skeletons/VideoGridSkeleton';
 
 //personalized recommendation video grid only mounted for authenticated users
-const RecommendedSection = ({ limit = 4, onSelectVideo }) => {
+const RecommendedSection = ({ limit = 3, onSelectVideo }) => {
   const { user, showInterestsModal } = useContext(AuthContext);
   const [recommendedVideos, setRecommendedVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,8 +18,8 @@ const RecommendedSection = ({ limit = 4, onSelectVideo }) => {
       return;
     }
     try {
-      //fetch personalized recommendations (max 4)
-      const data = await watchHistoryService.getRecommendations(Math.min(limit, 4));
+      //fetch personalized recommendations (max 3)
+      const data = await watchHistoryService.getRecommendations(Math.min(limit, 3));
       const filtered = (data || []).filter((v) => {
         if (!v) return false;
         if (user) {
@@ -35,7 +35,7 @@ const RecommendedSection = ({ limit = 4, onSelectVideo }) => {
           }
         }
         return true;
-      }).slice(0, 4);
+      }).slice(0, 3);
       setRecommendedVideos(filtered);
     } catch (err) {
       console.error('Failed to load recommendations:', err);

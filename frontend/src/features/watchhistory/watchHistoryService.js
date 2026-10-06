@@ -1,10 +1,14 @@
 import api from '../../api/axiosInstance';
 
-const recordWatchHistory = async (videoId, positionSeconds = 0) => {
-    const response = await api.post('/watch-history', {
+const recordWatchHistory = async (videoId, positionSeconds = 0, watchHistoryId = null) => {
+    const payload = {
         videoId,
         positionSeconds: Math.floor(positionSeconds || 0)
-    });
+    };
+    if (watchHistoryId) {
+        payload.watchHistoryId = watchHistoryId;
+    }
+    const response = await api.post('/watch-history', payload);
     return response.data;
 };
 
@@ -20,8 +24,9 @@ const clearWatchHistory = async () => {
     return response.data;
 };
 
-const removeFromWatchHistory = async (videoId) => {
-    const response = await api.delete(`/watch-history/${videoId}`);
+//deletes a single watch history row by its row id
+const removeFromWatchHistory = async (watchHistoryId) => {
+    const response = await api.delete(`/watch-history/${watchHistoryId}`);
     return response.data;
 };
 

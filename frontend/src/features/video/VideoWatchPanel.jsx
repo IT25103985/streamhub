@@ -58,6 +58,7 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
   const hasCountedView = useRef(false);
   const currentPosRef = useRef(0);
   const heartbeatIntervalRef = useRef(null);
+  const watchHistoryIdRef = useRef(null);
 
   const creatorName = video ? (
     (video.uploaderName && video.uploaderName.trim() !== '' && video.uploaderName.trim() !== 'null null') 
@@ -66,22 +67,27 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
   ) : 'Unknown';
 
   //save current playback position on unmount
-  const saveProgress = (pos) => {
-    if (!videoId) return;
+  const saveProgress = async (pos) => {
+    if (!videoId) return null;
     const targetPos = Math.max(0, Math.floor(typeof pos === 'number' ? pos : (currentPosRef.current || 0)));
-    watchHistoryService.recordWatchHistory(videoId, targetPos)
-      .then(() => {
-        window.dispatchEvent(new CustomEvent('streamhub-video-update', { detail: { videoId } }));
-      })
-      .catch((err) => {
-        console.warn('Watch history record skipped (guest or unauthenticated):', err);
-      });
+    try {
+      const data = await watchHistoryService.recordWatchHistory(videoId, targetPos, watchHistoryIdRef.current);
+      if (data && data.watchHistoryId) {
+        watchHistoryIdRef.current = data.watchHistoryId;
+      }
+      window.dispatchEvent(new CustomEvent('streamhub-video-update', { detail: { videoId } }));
+      return data;
+    } catch (err) {
+      console.warn('Watch history record skipped (guest or unauthenticated):', err);
+      return null;
+    }
   };
 
   useEffect(() => {
     if (!videoId) return;
     hasCountedView.current = false;
     currentPosRef.current = 0;
+    watchHistoryIdRef.current = null;
     
     //lock background page scrolling while modal is open
     document.body.style.overflow = 'hidden';
@@ -179,7 +185,8 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
     }
     saveProgress(time);
 
-    const autoplayEnabled = localStorage.getItem('autoplay_enabled');
+    const autoplayStorageKey = user?.userId ? `autoplay_enabled_${user.userId}` : 'autoplay_enabled';
+    const autoplayEnabled = localStorage.getItem(autoplayStorageKey);
     if ((autoplayEnabled === 'true' || autoplayEnabled === null) && hasNext) {
       // Small delay for better UX before jumping
       setTimeout(() => {
@@ -188,8 +195,8 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
     }
   };
 
-  const handleClose = () => {
-    saveProgress(currentPosRef.current);
+  const handleClose = async () => {
+    await saveProgress(currentPosRef.current);
     window.dispatchEvent(new CustomEvent('streamhub-video-update', { detail: { videoId } }));
     onClose();
   };
@@ -332,6 +339,7 @@ const VideoWatchPanel = ({ videoId, onClose }) => {
                   <VideoPlayer 
                     videoId={videoId} 
                     initialPosition={initialPosition}
+                    autoPlay={true}
                     onPlay={handlePlay}
                     onPause={handlePause}
                     onTimeUpdate={handleTimeUpdate}

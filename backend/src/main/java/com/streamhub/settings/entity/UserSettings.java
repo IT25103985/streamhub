@@ -40,6 +40,9 @@ public class UserSettings {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "history_cleared_at")
+    private LocalDateTime historyClearedAt;
+
     public UserSettings() {
     }
 
@@ -97,5 +100,13 @@ public class UserSettings {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getHistoryClearedAt() {
+        return historyClearedAt;
+    }
+
+    public void setHistoryClearedAt(LocalDateTime historyClearedAt) {
+        this.historyClearedAt = historyClearedAt;
     }
 }

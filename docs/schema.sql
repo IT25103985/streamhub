@@ -237,8 +237,8 @@ CREATE TABLE watch_history (
     watch_duration_seconds   INT               NULL,
     updated_at               DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_watch_history_User FOREIGN KEY (user_id) REFERENCES [User](user_id),
-    CONSTRAINT FK_watch_history_Video FOREIGN KEY (video_id) REFERENCES Video(video_id) ON DELETE CASCADE,
-    CONSTRAINT UQ_watch_history_User_Video UNIQUE (user_id, video_id)
+    CONSTRAINT FK_watch_history_Video FOREIGN KEY (video_id) REFERENCES Video(video_id) ON DELETE CASCADE
+    -- no unique on (user_id, video_id): multiple rows allowed (one per day or non consecutive rewatch)
 );
 GO
 CREATE INDEX IX_watch_history_User ON watch_history(user_id, updated_at DESC);
@@ -259,6 +259,21 @@ CREATE TABLE UserCategoryPreference (
 );
 GO
 CREATE INDEX IX_UserCategoryPreference_User ON UserCategoryPreference(user_id);
+GO
+
+-- ---------------------------------------------------------------------
+-- USER_SETTINGS
+-- ---------------------------------------------------------------------
+CREATE TABLE UserSettings (
+    user_id                UNIQUEIDENTIFIER  NOT NULL PRIMARY KEY,
+    watch_history_enabled  BIT               NOT NULL DEFAULT 1,
+    notify_social          BIT               NOT NULL DEFAULT 1,
+    notify_moderation      BIT               NOT NULL DEFAULT 1,
+    notify_system          BIT               NOT NULL DEFAULT 1,
+    updated_at             DATETIME2         NOT NULL DEFAULT SYSUTCDATETIME(),
+    history_cleared_at     DATETIME2         NULL,
+    CONSTRAINT FK_UserSettings_User FOREIGN KEY (user_id) REFERENCES [User](user_id) ON DELETE CASCADE
+);
 GO
 
 -- ---------------------------------------------------------------------

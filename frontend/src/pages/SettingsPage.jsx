@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { getSettings, updateSettings, deleteAccount } from '../api/settingsApi';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/SettingsPage.css';
@@ -25,8 +25,13 @@ const SettingsPage = () => {
     const [deleteError, setDeleteError] = useState(null);
 
     useEffect(() => {
-        const localAutoplay = localStorage.getItem('autoplay_enabled');
-        if (localAutoplay !== null) setAutoplay(localAutoplay === 'true');
+        const storageKey = user?.userId ? `autoplay_enabled_${user.userId}` : 'autoplay_enabled';
+        const localAutoplay = localStorage.getItem(storageKey);
+        if (localAutoplay !== null) {
+            setAutoplay(localAutoplay === 'true');
+        } else {
+            setAutoplay(true);
+        }
 
         const fetchSettings = async () => {
             try {
@@ -57,7 +62,8 @@ const SettingsPage = () => {
     const handleLocalToggle = (key, value) => {
         if (key === 'autoplay') {
             setAutoplay(value);
-            localStorage.setItem('autoplay_enabled', value);
+            const storageKey = user?.userId ? `autoplay_enabled_${user.userId}` : 'autoplay_enabled';
+            localStorage.setItem(storageKey, value);
             showSaveStatus('Local settings updated');
         }
     };

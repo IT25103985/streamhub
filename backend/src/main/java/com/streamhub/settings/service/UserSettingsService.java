@@ -7,7 +7,9 @@ import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -32,6 +34,29 @@ public class UserSettingsService {
                     settings.setUser(userRef);
                     return userSettingsRepository.save(settings);
                 });
+    }
+
+    //read only lookup without inserting rows
+    @Transactional(readOnly = true)
+    public Optional<UserSettings> findByUserId(UUID userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+        return userSettingsRepository.findById(userId);
+    }
+
+    //lazy creation of settings row on full history clear
+    @Transactional
+    public UserSettings recordHistoryCleared(UUID userId, LocalDateTime clearedAt) {
+        UserSettings settings = userSettingsRepository.findById(userId)
+                .orElseGet(() -> {
+                    User userRef = entityManager.getReference(User.class, userId);
+                    UserSettings s = new UserSettings();
+                    s.setUser(userRef);
+                    return s;
+                });
+        settings.setHistoryClearedAt(clearedAt);
+        return userSettingsRepository.save(settings);
     }
 
     //updates individual notification and history preferences

@@ -4,12 +4,14 @@ import com.streamhub.auth.repository.UserRepository;
 import com.streamhub.category.entity.Category;
 import com.streamhub.common.entity.User;
 import com.streamhub.preferences.repository.UserCategoryPreferenceRepository;
+import com.streamhub.settings.entity.UserSettings;
+import com.streamhub.settings.service.UserSettingsService;
 import com.streamhub.video.dto.VideoResponseDTO;
 import com.streamhub.video.entity.Video;
 import com.streamhub.video.repository.VideoRepository;
 import com.streamhub.watchhistory.controller.WatchHistoryController;
 import com.streamhub.watchhistory.repository.WatchHistoryRepository;
-import com.streamhub.watchhistory.service.CategoryAffinityStrategy;
+import com.streamhub.watchhistory.service.HistoryBasedStrategy;
 import com.streamhub.watchhistory.service.PreferredCategoryStrategy;
 import com.streamhub.watchhistory.service.TrendingFallbackStrategy;
 import com.streamhub.watchhistory.service.WatchHistoryService;
@@ -19,21 +21,26 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 
-import java.util.ArrayList;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-//unit test suite for recommendation and trending engagement thresholds and auth guard
+//unit test suite for recommendation cycle windowing auth guard and history clear rules
 public class WatchHistoryRecommendationTest {
+
+    private static final ZoneId ZONE = ZoneId.of("UTC");
+    private static final Instant NOW_INSTANT = Instant.parse("2026-10-06T12:00:00Z");
 
     @Mock
     private VideoRepository videoRepository;
@@ -50,43 +57,88 @@ public class WatchHistoryRecommendationTest {
     @Mock
     private com.streamhub.watchhistory.repository.VideoViewEventRepository videoViewEventRepository;
 
-    private TrendingFallbackStrategy trendingFallbackStrategy;
+    private TestUserSettingsService testUserSettingsService;
+    private Clock fixedClock;
     private PreferredCategoryStrategy preferredCategoryStrategy;
-    private CategoryAffinityStrategy categoryAffinityStrategy;
+    private HistoryBasedStrategy historyBasedStrategy;
+    private TrendingFallbackStrategy trendingFallbackStrategy;
     private WatchHistoryService watchHistoryService;
     private WatchHistoryController watchHistoryController;
 
     private User testUser;
     private User otherUser;
-    private Video highViewVideo;
-    private Video qualifyingSecondVideo;
-    private Video userOwnVideo;
     private Category gamingCategory;
+    private Category musicCategory;
+    private Video video1;
+    private Video video2;
+    private Video video3;
+    private Video video4;
 
-    static class TestUserSettingsService extends com.streamhub.settings.service.UserSettingsService {
+    static class TestUserSettingsService extends UserSettingsService {
+        private UserSettings userSettings;
+        public boolean recordHistoryClearedCalled = false;
+        public int findByUserIdCallCount = 0;
+        public int getOrCreateCallCount = 0;
+
         public TestUserSettingsService() {
             super(null, null);
         }
+
+        public void setUserSettings(UserSettings settings) {
+            this.userSettings = settings;
+        }
+
         @Override
-        public com.streamhub.settings.entity.UserSettings getOrCreate(UUID userId) {
-            return new com.streamhub.settings.entity.UserSettings();
+        public Optional<UserSettings> findByUserId(UUID userId) {
+            findByUserIdCallCount++;
+            return Optional.ofNullable(userSettings);
+        }
+
+        @Override
+        public UserSettings getOrCreate(UUID userId) {
+            getOrCreateCallCount++;
+            if (userSettings != null) return userSettings;
+            userSettings = new UserSettings();
+            return userSettings;
+        }
+
+        @Override
+        public UserSettings recordHistoryCleared(UUID userId, LocalDateTime clearedAt) {
+            recordHistoryClearedCalled = true;
+            if (userSettings == null) {
+                userSettings = new UserSettings();
+            }
+            userSettings.setHistoryClearedAt(clearedAt);
+            return userSettings;
         }
     }
 
     @BeforeEach
     public void setup() {
-        com.streamhub.settings.service.UserSettingsService userSettingsService = new TestUserSettingsService();
+        fixedClock = Clock.fixed(NOW_INSTANT, ZONE);
+        testUserSettingsService = new TestUserSettingsService();
 
-        trendingFallbackStrategy = new TrendingFallbackStrategy(videoViewEventRepository, videoRepository);
         preferredCategoryStrategy = new PreferredCategoryStrategy(userCategoryPreferenceRepository, videoRepository);
-        categoryAffinityStrategy = new CategoryAffinityStrategy(watchHistoryRepository, videoRepository);
-        watchHistoryService = new WatchHistoryService(watchHistoryRepository, videoRepository, categoryAffinityStrategy, preferredCategoryStrategy, trendingFallbackStrategy, userSettingsService);
+        historyBasedStrategy = new HistoryBasedStrategy(watchHistoryRepository, videoRepository);
+        trendingFallbackStrategy = new TrendingFallbackStrategy(videoViewEventRepository, videoRepository);
+
+        watchHistoryService = new WatchHistoryService(
+                watchHistoryRepository,
+                videoRepository,
+                userRepository,
+                preferredCategoryStrategy,
+                historyBasedStrategy,
+                trendingFallbackStrategy,
+                testUserSettingsService,
+                fixedClock
+        );
         watchHistoryController = new WatchHistoryController(watchHistoryService, userRepository);
 
         testUser = new User();
         testUser.setUserId(UUID.randomUUID());
         testUser.setUsername("testuser");
-        testUser.setHasSetInterests(false);
+        testUser.setHasSetInterests(true);
+        testUser.setCreatedAt(LocalDateTime.now(fixedClock).minusDays(20));
 
         otherUser = new User();
         otherUser.setUserId(UUID.randomUUID());
@@ -96,212 +148,225 @@ public class WatchHistoryRecommendationTest {
         gamingCategory.setId(UUID.randomUUID());
         gamingCategory.setName("Gaming");
 
-        highViewVideo = new Video("Popular Video", "Desc", "path1.mp4", "thumb1.jpg", otherUser, "PUBLIC");
-        highViewVideo.setVideoId(UUID.randomUUID());
-        highViewVideo.setViewCount(25);
-        highViewVideo.setCategory(gamingCategory);
+        musicCategory = new Category();
+        musicCategory.setId(UUID.randomUUID());
+        musicCategory.setName("Music");
 
-        qualifyingSecondVideo = new Video("Second Video", "Desc", "path2.mp4", "thumb2.jpg", otherUser, "PUBLIC");
-        qualifyingSecondVideo.setVideoId(UUID.randomUUID());
-        qualifyingSecondVideo.setViewCount(12);
-        qualifyingSecondVideo.setCategory(gamingCategory);
+        video1 = createVideo("Video 1", 50, gamingCategory);
+        video2 = createVideo("Video 2", 30, gamingCategory);
+        video3 = createVideo("Video 3", 20, gamingCategory);
+        video4 = createVideo("Video 4", 15, gamingCategory);
+    }
 
-        userOwnVideo = new Video("My Own Video", "Desc", "path3.mp4", "thumb3.jpg", testUser, "PUBLIC");
-        userOwnVideo.setVideoId(UUID.randomUUID());
-        userOwnVideo.setViewCount(100);
-        userOwnVideo.setCategory(gamingCategory);
+    private Video createVideo(String title, int views, Category cat) {
+        Video v = new Video(title, "Desc", "path.mp4", "thumb.jpg", otherUser, "PUBLIC");
+        v.setVideoId(UUID.randomUUID());
+        v.setViewCount(views);
+        v.setCategory(cat);
+        return v;
     }
 
     @Test
-    //verifies trending fallback filters videos below engagement threshold and returns qualifying videos
-    public void testTrendingFallbackFiltersBelowThresholdAndBackfills() {
-        when(videoViewEventRepository.findTrendingVideosWithMinWatches(any(), eq(5L), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo));
-        when(videoRepository.findPublicTrendingVideosWithMinViews(eq(10), any(PageRequest.class)))
-                .thenReturn(List.of(qualifyingSecondVideo));
+    //verifies recommendations hidden for 7 days after watch history clear
+    public void testHiddenForSevenDaysAfterClear() {
+        UserSettings settings = new UserSettings();
+        //cleared 3 days ago
+        settings.setHistoryClearedAt(LocalDateTime.now(fixedClock).minusDays(3));
+        testUserSettingsService.setUserSettings(settings);
 
-        List<Video> results = trendingFallbackStrategy.getRecommendations(null, 2);
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+        verifyNoInteractions(videoRepository);
+    }
+
+    @Test
+    //verifies recommendations remain hidden after 7 days if user has no watch history in window without fallback
+    public void testHiddenAfterSevenDaysIfNoNewHistoryWithoutFallback() {
+        UserSettings settings = new UserSettings();
+        //cleared 10 days ago (cycle 1 after clear)
+        settings.setHistoryClearedAt(LocalDateTime.now(fixedClock).minusDays(10));
+        testUserSettingsService.setUserSettings(settings);
+
+        //no watch history in the 7-day window prior to cycle 1
+        when(watchHistoryRepository.findTopCategoryDataByUserInWindow(eq(testUser), any(), any(), any(PageRequest.class)))
+                .thenReturn(Collections.emptyList());
+
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+        //must NOT fall back to picked categories
+        verify(userCategoryPreferenceRepository, never()).findCategoryIdsByUser(any());
+    }
+
+    @Test
+    //verifies cycles anchored to clearedAt timestamp once history exists
+    public void testCyclesAnchoredToClearedAt() {
+        UserSettings settings = new UserSettings();
+        //cleared 10 days ago: cycle 1 runs from clearedAt + 7 days to clearedAt + 14 days
+        LocalDateTime clearedAt = LocalDateTime.now(fixedClock).minusDays(10);
+        settings.setHistoryClearedAt(clearedAt);
+        testUserSettingsService.setUserSettings(settings);
+
+        LocalDateTime expectedWindowStart = clearedAt;
+        LocalDateTime expectedWindowEnd = clearedAt.plusDays(7);
+
+        Object[] row = new Object[]{gamingCategory.getId(), 5L, clearedAt.plusDays(2)};
+        when(watchHistoryRepository.findTopCategoryDataByUserInWindow(
+                eq(testUser), eq(expectedWindowStart), eq(expectedWindowEnd), any(PageRequest.class)))
+                .thenReturn(List.<Object[]>of(row));
+
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(gamingCategory.getId())), eq(testUser.getUserId()), eq(10), any(PageRequest.class)))
+                .thenReturn(List.of(video1, video2));
+
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
 
         assertEquals(2, results.size());
-        assertEquals(highViewVideo, results.get(0));
-        assertEquals(qualifyingSecondVideo, results.get(1));
+        assertEquals(video1.getVideoId(), results.get(0).getVideoId());
     }
 
     @Test
-    //verifies category affinity applies minimum engagement threshold (viewCount >= 10)
-    public void testCategoryAffinityFiltersBelowThresholdAndBackfills() {
-        Object[] catRow = new Object[]{gamingCategory.getId(), 5L};
-        List<Object[]> catList = new ArrayList<>();
-        catList.add(catRow);
-        when(watchHistoryRepository.findMostWatchedCategoryDataByUser(eq(testUser), any(PageRequest.class)))
-                .thenReturn(catList);
-        when(videoRepository.findPublicVideosByCategoryWithMinViews(eq(gamingCategory.getId()), eq(CategoryAffinityStrategy.MIN_VIEWS_FOR_TRENDING), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo, qualifyingSecondVideo));
+    //verifies cycle anchored to account creation when history was never cleared
+    public void testAnchoredToAccountCreationIfNeverCleared() {
+        testUserSettingsService.setUserSettings(null);
 
-        List<Video> results = categoryAffinityStrategy.getRecommendations(testUser, 2);
+        //account created 20 days ago: cycle 2 (14 to 21 days), window is days 7 to 14
+        LocalDateTime createdAt = testUser.getCreatedAt();
+        LocalDateTime expectedWindowStart = createdAt.plusDays(7);
+        LocalDateTime expectedWindowEnd = createdAt.plusDays(14);
+
+        Object[] row = new Object[]{musicCategory.getId(), 4L, createdAt.plusDays(10)};
+        when(watchHistoryRepository.findTopCategoryDataByUserInWindow(
+                eq(testUser), eq(expectedWindowStart), eq(expectedWindowEnd), any(PageRequest.class)))
+                .thenReturn(List.<Object[]>of(row));
+
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(musicCategory.getId())), eq(testUser.getUserId()), eq(10), any(PageRequest.class)))
+                .thenReturn(List.of(video1));
+
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
+
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    //verifies first cycle (under 7 days old) uses picked categories
+    public void testFirstCycleUsesPickedCategories() {
+        testUser.setCreatedAt(LocalDateTime.now(fixedClock).minusDays(3));
+        testUserSettingsService.setUserSettings(null);
+
+        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser)))
+                .thenReturn(List.of(gamingCategory.getId()));
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(gamingCategory.getId())), eq(testUser.getUserId()), eq(10), any(PageRequest.class)))
+                .thenReturn(List.of(video1, video2));
+
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
 
         assertEquals(2, results.size());
-        assertEquals(highViewVideo, results.get(0));
-        assertEquals(qualifyingSecondVideo, results.get(1));
+        verify(watchHistoryRepository, never()).findTopCategoryDataByUserInWindow(any(), any(), any(), any());
     }
 
     @Test
-    //verifies cold start recommendations use preferred category strategy once preferences are set
-    public void testColdStartRecommendationsUsePreferredCategories() {
-        testUser.setHasSetInterests(true);
-        List<UUID> preferredCatIds = List.of(gamingCategory.getId());
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(0L);
-        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser))).thenReturn(preferredCatIds);
-        when(videoRepository.findPublicVideosByCategoriesWithMinViews(eq(preferredCatIds), eq(PreferredCategoryStrategy.MIN_VIEWS_FOR_RECOMMENDATION), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo));
+    //verifies later cycle with no history falls back to picked categories if never cleared
+    public void testLaterCycleWithNoHistoryFallsBackToPickedCategoriesIfNeverCleared() {
+        testUserSettingsService.setUserSettings(null);
 
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 1);
+        //no history in window
+        when(watchHistoryRepository.findTopCategoryDataByUserInWindow(eq(testUser), any(), any(), any(PageRequest.class)))
+                .thenReturn(Collections.emptyList());
 
-        assertEquals(1, recs.size());
-        assertEquals(highViewVideo.getVideoId(), recs.get(0).getVideoId());
+        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser)))
+                .thenReturn(List.of(gamingCategory.getId()));
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(gamingCategory.getId())), eq(testUser.getUserId()), eq(10), any(PageRequest.class)))
+                .thenReturn(List.of(video1));
+
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
+
+        assertEquals(1, results.size());
+        assertEquals(video1.getVideoId(), results.get(0).getVideoId());
     }
 
     @Test
-    //verifies new account with no videos in preferred categories returns empty recommendations and no trending fallback
-    public void testNewAccountWithoutVideosInPreferredCategoriesReturnsEmpty() {
-        testUser.setHasSetInterests(true);
-        testUser.setCreatedAt(java.time.LocalDateTime.now().minusDays(2));
-        List<UUID> preferredCatIds = List.of(gamingCategory.getId());
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(0L);
-        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser))).thenReturn(preferredCatIds);
-        when(videoRepository.findPublicVideosByCategoriesWithMinViews(eq(preferredCatIds), eq(PreferredCategoryStrategy.MIN_VIEWS_FOR_RECOMMENDATION), any(PageRequest.class)))
-                .thenReturn(List.of());
+    //verifies minimum 10 views threshold passed to repository query
+    public void testMinTenViewsEnforced() {
+        testUser.setCreatedAt(LocalDateTime.now(fixedClock).minusDays(2));
+        testUserSettingsService.setUserSettings(null);
 
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 4);
+        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser)))
+                .thenReturn(List.of(gamingCategory.getId()));
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(gamingCategory.getId())), eq(testUser.getUserId()), eq(10), any(PageRequest.class)))
+                .thenReturn(List.of(video1));
 
-        assertNotNull(recs);
-        assertTrue(recs.isEmpty());
-        verify(videoViewEventRepository, never()).findTrendingVideosWithMinWatches(any(), anyLong(), any());
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 3);
+
+        assertEquals(1, results.size());
+        verify(videoRepository).findEligibleVideosByCategories(any(), any(), eq(10), any());
     }
 
     @Test
-    //verifies account older than 7 days with few watches backfills with trending fallback
-    public void testAccountOlderThanSevenDaysWithFewWatchesGetsTrendingFallback() {
-        testUser.setHasSetInterests(true);
-        testUser.setCreatedAt(java.time.LocalDateTime.now().minusDays(10));
-        List<UUID> preferredCatIds = List.of(gamingCategory.getId());
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(2L);
-        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser))).thenReturn(preferredCatIds);
-        when(videoRepository.findPublicVideosByCategoriesWithMinViews(eq(preferredCatIds), eq(PreferredCategoryStrategy.MIN_VIEWS_FOR_RECOMMENDATION), any(PageRequest.class)))
-                .thenReturn(List.of());
-        when(videoViewEventRepository.findTrendingVideosWithMinWatches(any(), eq(5L), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo));
+    //verifies user own uploads and non-public videos excluded via repository query parameters
+    public void testOwnUploadsAndNonPublicExcluded() {
+        testUser.setCreatedAt(LocalDateTime.now(fixedClock).minusDays(2));
+        testUserSettingsService.setUserSettings(null);
 
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 4);
+        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser)))
+                .thenReturn(List.of(gamingCategory.getId()));
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(gamingCategory.getId())), eq(testUser.getUserId()), eq(10), any(PageRequest.class)))
+                .thenReturn(List.of(video1));
 
-        assertNotNull(recs);
-        assertEquals(1, recs.size());
-        assertEquals(highViewVideo.getVideoId(), recs.get(0).getVideoId());
+        watchHistoryService.getRecommendations(testUser, 3);
+
+        //verifies excludeUserId is passed to exclude own uploads
+        verify(videoRepository).findEligibleVideosByCategories(any(), eq(testUser.getUserId()), eq(10), any());
     }
 
     @Test
-    //verifies account older than 7 days with cleared watch history (0 watched count) returns empty recommendations
-    public void testClearedWatchHistoryOnEstablishedAccountReturnsEmptyRecommendations() {
-        testUser.setHasSetInterests(true);
-        testUser.setCreatedAt(java.time.LocalDateTime.now().minusDays(10));
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(0L);
+    //verifies maximum 3 recommendations enforced in backend even when more available or requested
+    public void testMaxThreeVideosEnforced() {
+        testUser.setCreatedAt(LocalDateTime.now(fixedClock).minusDays(2));
+        testUserSettingsService.setUserSettings(null);
 
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 4);
+        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser)))
+                .thenReturn(List.of(gamingCategory.getId()));
+        when(videoRepository.findEligibleVideosByCategories(
+                eq(List.of(gamingCategory.getId())), eq(testUser.getUserId()), eq(10), eq(PageRequest.of(0, 3))))
+                .thenReturn(List.of(video1, video2, video3, video4));
 
-        assertNotNull(recs);
-        assertTrue(recs.isEmpty());
-        verify(videoRepository, never()).findPublicVideosByCategoriesWithMinViews(any(), anyInt(), any());
-        verify(videoViewEventRepository, never()).findTrendingVideosWithMinWatches(any(), anyLong(), any());
+        List<VideoResponseDTO> results = watchHistoryService.getRecommendations(testUser, 10);
+
+        assertEquals(3, results.size());
     }
 
     @Test
-    //verifies user with enough watch history (>= 10) switches to behavioral category affinity
-    public void testBehavioralWatchHistorySwitchesToCategoryAffinity() {
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(10L);
-        Object[] catRow = new Object[]{gamingCategory.getId(), 8L};
-        List<Object[]> catList = new ArrayList<>();
-        catList.add(catRow);
-        when(watchHistoryRepository.findMostWatchedCategoryDataByUser(eq(testUser), any(PageRequest.class)))
-                .thenReturn(catList);
-        when(videoRepository.findPublicVideosByCategoryWithMinViews(eq(gamingCategory.getId()), eq(10), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo));
+    //verifies recommendation read path does not create or persist UserSettings row
+    public void testNoUserSettingsRowCreatedOnRead() {
+        testUserSettingsService.setUserSettings(null);
+        when(watchHistoryRepository.findTopCategoryDataByUserInWindow(any(), any(), any(), any()))
+                .thenReturn(Collections.emptyList());
+        when(userCategoryPreferenceRepository.findCategoryIdsByUser(any()))
+                .thenReturn(Collections.emptyList());
 
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 1);
+        watchHistoryService.getRecommendations(testUser, 3);
 
-        assertEquals(1, recs.size());
-        assertEquals(highViewVideo.getVideoId(), recs.get(0).getVideoId());
-        verify(watchHistoryRepository, times(1)).findMostWatchedCategoryDataByUser(eq(testUser), any(PageRequest.class));
+        assertEquals(1, testUserSettingsService.findByUserIdCallCount);
+        assertEquals(0, testUserSettingsService.getOrCreateCallCount);
+        assertFalse(testUserSettingsService.recordHistoryClearedCalled);
     }
 
     @Test
-    //verifies user with fewer than 10 watched videos still uses preferred categories
-    public void testWatchCountBelowTenUsesPreferredCategories() {
-        testUser.setHasSetInterests(true);
-        List<UUID> preferredCatIds = List.of(gamingCategory.getId());
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(9L);
-        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser))).thenReturn(preferredCatIds);
-        when(videoRepository.findPublicVideosByCategoriesWithMinViews(eq(preferredCatIds), eq(PreferredCategoryStrategy.MIN_VIEWS_FOR_RECOMMENDATION), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo));
+    //verifies clearUserHistory updates timestamp lazily with lock
+    public void testClearUserHistoryUpdatesTimestampWithLock() {
+        watchHistoryService.clearUserHistory(testUser);
 
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 1);
-
-        assertEquals(1, recs.size());
-        assertEquals(highViewVideo.getVideoId(), recs.get(0).getVideoId());
-        verify(watchHistoryRepository, never()).findMostWatchedCategoryDataByUser(any(), any());
-    }
-
-    @Test
-    //verifies recommended videos do not include user's own videos
-    public void testRecommendationsExcludeUserOwnVideos() {
-        testUser.setHasSetInterests(true);
-        List<UUID> preferredCatIds = List.of(gamingCategory.getId());
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(0L);
-        when(userCategoryPreferenceRepository.findCategoryIdsByUser(eq(testUser))).thenReturn(preferredCatIds);
-        // Repository returns user's own video and another user's video
-        when(videoRepository.findPublicVideosByCategoriesWithMinViews(eq(preferredCatIds), eq(PreferredCategoryStrategy.MIN_VIEWS_FOR_RECOMMENDATION), any(PageRequest.class)))
-                .thenReturn(List.of(userOwnVideo, highViewVideo));
-
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 2);
-
-        assertEquals(1, recs.size());
-        assertEquals(highViewVideo.getVideoId(), recs.get(0).getVideoId());
-        assertFalse(recs.stream().anyMatch(dto -> dto.getVideoId().equals(userOwnVideo.getVideoId())));
-    }
-
-    @Test
-    //verifies fresh user who has not completed onboarding gets empty recommendations list
-    public void testFreshUserWithoutOnboardingGetsEmptyRecommendations() {
-        testUser.setHasSetInterests(false);
-        when(watchHistoryRepository.countDistinctWatchedVideosByUser(eq(testUser))).thenReturn(0L);
-
-        List<VideoResponseDTO> recs = watchHistoryService.getRecommendations(testUser, 10);
-
-        assertNotNull(recs);
-        assertTrue(recs.isEmpty());
-        verify(videoRepository, never()).findPublicTrendingVideosWithMinViews(anyInt(), any(PageRequest.class));
-    }
-
-    @Test
-    //verifies guest calling recommendations endpoint directly receives 401 unauthorized
-    public void testGuestCallingRecommendationsReturns401() {
-        ResponseEntity<List<VideoResponseDTO>> response = watchHistoryController.getRecommendations(null, 10);
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertNull(response.getBody());
-    }
-
-    @Test
-    //verifies public trending endpoint is accessible without authentication
-    public void testPublicTrendingEndpointAccessibleForGuests() {
-        when(videoViewEventRepository.findTrendingVideosWithMinWatches(any(), eq(5L), any(PageRequest.class)))
-                .thenReturn(List.of(highViewVideo));
-
-        ResponseEntity<List<VideoResponseDTO>> response = watchHistoryController.getPlatformTrendingVideos(10);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        List<VideoResponseDTO> body = response.getBody();
-        assertNotNull(body);
-        assertEquals(1, body.size());
-        assertEquals(highViewVideo.getVideoId(), body.get(0).getVideoId());
+        verify(userRepository).findByIdWithLock(testUser.getUserId());
+        verify(watchHistoryRepository).deleteByUser(testUser);
+        assertTrue(testUserSettingsService.recordHistoryClearedCalled);
     }
 }
