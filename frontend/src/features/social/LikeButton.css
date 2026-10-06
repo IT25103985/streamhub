@@ -1,3 +1,4 @@
+/* Like and dislike default buttons */
 .btn-like, .btn-dislike {
   display: inline-flex;
   align-items: center;
@@ -13,10 +14,12 @@
   transition: all 0.2s ease;
 }
 
+/* Like and dislike buttons hover state */
 .btn-like:hover:not(:disabled), .btn-dislike:hover:not(:disabled) {
   background: #3a3a3a;
 }
 
+/* Like and dislike buttons active / selected state */
 .btn-like.active, .btn-dislike.active {
   background: #fff;
   color: #000;

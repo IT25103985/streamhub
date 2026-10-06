@@ -84,6 +84,7 @@
     height: 0;
 }
 
+/* Settings toggle slider (off / inactive state) */
 .toggle-slider {
     position: absolute;
     cursor: pointer;
@@ -109,6 +110,7 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
+/* Settings toggle slider (on / active state) */
 input:checked + .toggle-slider {
     background-color: var(--accent); /* Accent color when toggled on */
 }
@@ -179,6 +181,7 @@ input:checked + .toggle-slider:before {
     color: #ef4444;
 }
 
+/* Settings danger button (Delete account, clear history) */
 .danger-btn {
     flex-shrink: 0;
     padding: 0.6rem 1.2rem;
@@ -193,6 +196,7 @@ input:checked + .toggle-slider:before {
     white-space: nowrap;
 }
 
+/* Settings danger button hover state */
 .danger-btn:hover {
     background: #ef4444;
     color: #fff;
@@ -326,6 +330,7 @@ input:checked + .toggle-slider:before {
     margin-top: 0.5rem;
 }
 
+/* Delete modal cancel button */
 .delete-modal-cancel {
     flex: 1;
     padding: 0.7rem;
@@ -342,6 +347,7 @@ input:checked + .toggle-slider:before {
     background: var(--surface-3, #1e1e2e);
 }
 
+/* Delete modal confirm / permanent delete button */
 .delete-modal-confirm {
     flex: 2;
     padding: 0.7rem;
@@ -355,6 +361,7 @@ input:checked + .toggle-slider:before {
     transition: background 0.2s, box-shadow 0.2s;
 }
 
+/* Delete modal confirm button hover state */
 .delete-modal-confirm:hover:not(:disabled) {
     background: #dc2626;
     box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45);

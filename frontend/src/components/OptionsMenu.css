@@ -3,6 +3,7 @@
   display: inline-block;
 }
 
+/* Three dots options trigger button */
 .options-btn {
   background: transparent;
   border: none;
@@ -17,6 +18,7 @@
   transition: background 0.2s var(--ease, ease), color 0.2s var(--ease, ease);
 }
 
+/* Three dots options button hover state */
 .options-btn:hover {
   background: var(--surface-3, rgba(255,255,255,0.1));
   color: var(--text, #fff);
@@ -41,6 +43,7 @@
   padding: 6px 0;
 }
 
+/* Options dropdown item button */
 .options-menu-item {
   padding: 10px 16px;
   color: var(--text, #fff);
@@ -54,14 +57,17 @@
   white-space: nowrap;
 }
 
+/* Options dropdown item button hover state */
 .options-menu-item:hover {
   background: var(--surface-2, rgba(255,255,255,0.08));
 }
 
+/* Danger options dropdown item button */
 .options-menu-item.danger {
   color: #ef4444;
 }
 
+/* Danger options dropdown item hover state */
 .options-menu-item.danger:hover {
   background: rgba(239, 68, 68, 0.15);
 }

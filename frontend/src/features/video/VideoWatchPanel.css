@@ -104,6 +104,7 @@
 }
 
 
+/* Watch panel close button (top right) */
 .watch-panel-close-btn {
   position: absolute;
   top: 14px;
@@ -123,12 +124,14 @@
   backdrop-filter: blur(8px);
 }
 
+/* Watch panel close button hover state */
 .watch-panel-close-btn:hover {
   background: var(--accent);
   border-color: var(--accent-light);
   transform: scale(1.08);
 }
 
+/* Watch panel previous / next video navigation buttons */
 .watch-panel-nav-btn {
   position: absolute;
   top: 50%;

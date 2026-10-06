@@ -101,23 +101,32 @@ nav a.active{color:var(--text);background:var(--surface-2)}
 .search-pill:hover{transform: scale(1.01)}
 .search-pill:focus-within{border-color:var(--violet)}
 .search-pill svg{flex-shrink:0;opacity:.6}
+/* Search input */
 .search-pill input{
   background:none;border:none;outline:none;color:var(--text);
   font-size:13.5px;width:100%;font-family:"IBM Plex Mono",monospace;
 }
 .search-pill input::placeholder{color:var(--text-faint)}
+
+/* Base button */
 .btn{
   border:none;border-radius:999px;padding:7px 16px;
   font-size:13.5px;font-weight:600;font-family:"Roboto",sans-serif;text-transform:uppercase;
   transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .2s var(--ease);
 }
+
+/* Primary button (Sign in, modal confirm, save) */
 .btn-primary{
   background:var(--accent);
   color:#fff;
 }
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 30px -8px rgba(91,95,239,.55);background:var(--accent-hover);}
+
+/* Ghost / Secondary button (cancel, outline) */
 .btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
 .btn-ghost:hover{background:var(--surface-2)}
+
+/* Navbar upload video button */
 .upload-btn {
   display: flex;
   align-items: center;
@@ -529,6 +538,7 @@ section.block{padding:16px 32px 48px}
 .search-bar-inline input::placeholder{color:var(--text-faint)}
 
 .load-more-row{display:flex;justify-content:center;margin-top:40px}
+/* Load more videos button */
 .btn-load{
   background:var(--surface);border:1px solid var(--border);
   color:var(--text);padding:13px 30px;border-radius:999px;
@@ -727,6 +737,7 @@ footer p{color:var(--text-faint);font-size:13px}
   gap: 16px;
   margin-top: 40px;
 }
+/* Modal submit upload button */
 .upload-submit-btn {
   display: flex;
   align-items: center;
@@ -988,6 +999,7 @@ footer p{color:var(--text-faint);font-size:13px}
   gap: 8px;
   justify-content: flex-end;
 }
+/* Admin table / Video card action buttons */
 .btn-action {
   background: transparent;
   border: 1px solid var(--border);
@@ -1006,16 +1018,19 @@ footer p{color:var(--text-faint);font-size:13px}
   color: var(--text);
   border-color: var(--text-dim);
 }
+/* Edit button hover state */
 .btn-action.edit:hover {
   color: var(--cyan);
   border-color: var(--cyan);
   background: rgba(45, 212, 191, 0.1);
 }
+/* Delete button hover state */
 .btn-action.delete:hover {
   color: var(--rose);
   border-color: var(--rose);
   background: rgba(251, 113, 133, 0.1);
 }
+/* Warning / Action button hover state */
 .btn-action.warn:hover {
   color: var(--amber);
   border-color: var(--amber);

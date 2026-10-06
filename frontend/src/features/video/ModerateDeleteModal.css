@@ -209,6 +209,7 @@
   margin-top: 6px;
 }
 
+/* Moderator modal base button */
 .mod-btn {
   padding: 10px 18px;
   border-radius: 8px;
@@ -224,22 +225,26 @@
   cursor: not-allowed;
 }
 
+/* Moderator modal cancel button */
 .mod-btn-cancel {
   background: rgba(255, 255, 255, 0.06);
   color: #d1d5db;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Moderator modal cancel button hover state */
 .mod-btn-cancel:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
 }
 
+/* Moderator modal confirm / delete video button */
 .mod-btn-confirm {
   background: #ef4444;
   color: #ffffff;
 }
 
+/* Moderator modal confirm button hover state */
 .mod-btn-confirm:hover:not(:disabled) {
   background: #dc2626;
 }

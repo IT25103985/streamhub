@@ -51,6 +51,7 @@
   margin: 0;
 }
 
+/* Follow modal close button */
 .follow-modal-close-btn {
   background: transparent;
   border: none;
@@ -62,6 +63,7 @@
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
+/* Follow modal close button hover state */
 .follow-modal-close-btn:hover {
   color: var(--text, #f5f5f7);
   background: var(--surface-2, #252530);
@@ -149,6 +151,7 @@
   text-overflow: ellipsis;
 }
 
+/* Follow list modal unfollow button */
 .follow-unfollow-btn {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-dim, #9aa3c0);
@@ -162,6 +165,7 @@
   flex-shrink: 0;
 }
 
+/* Follow list modal unfollow button hover state */
 .follow-unfollow-btn:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.15);
   color: var(--rose, #fb7185);
@@ -192,6 +196,7 @@
   gap: 8px;
 }
 
+/* Follow modal pagination button */
 .follow-page-btn {
   background: var(--surface-2, #252530);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
@@ -204,6 +209,7 @@
   transition: background-color 0.15s ease;
 }
 
+/* Follow modal pagination button hover state */
 .follow-page-btn:hover:not(:disabled) {
   background: var(--surface-3, #2f2f3d);
 }

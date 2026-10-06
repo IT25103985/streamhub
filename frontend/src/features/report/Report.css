@@ -10,6 +10,7 @@
     position: relative;
 }
 
+/* Report modal close button */
 .report-modal .modal-close {
     position: absolute;
     top: 16px;
@@ -23,6 +24,7 @@
     transition: color 0.2s var(--ease, ease);
 }
 
+/* Report modal close button hover state */
 .report-modal .modal-close:hover {
     color: var(--text, #fff);
 }
