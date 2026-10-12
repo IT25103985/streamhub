@@ -111,16 +111,14 @@ public class WatchHistoryService {
         //pessimistic lock on user row to serialize concurrent writes
         userRepository.findByIdWithLock(user.getUserId());
 
-        //check if user already watched this video today
-        List<WatchHistory> existingForVideo = watchHistoryRepository
-                .findLatestByUserIdAndVideoId(user.getUserId(), videoId, PageRequest.of(0, 1));
-
+        //check if user's latest watched video was this same video today
+        Optional<WatchHistory> latestOverall = watchHistoryRepository.findFirstByUserOrderByUpdatedAtDesc(user);
         LocalDate today = todayColombo();
 
-        if (!existingForVideo.isEmpty()) {
-            WatchHistory existingRow = existingForVideo.get(0);
-            if (today.equals(toColomboDate(existingRow.getUpdatedAt()))) {
-                //same video same day update in place and refresh timestamp
+        if (latestOverall.isPresent()) {
+            WatchHistory existingRow = latestOverall.get();
+            if (existingRow.getVideo().getVideoId().equals(videoId) && today.equals(toColomboDate(existingRow.getUpdatedAt()))) {
+                //same video consecutively on the same day: update in place and refresh timestamp
                 existingRow.setLastPosition(pos);
                 existingRow.setWatchDurationSeconds(pos);
                 existingRow.setUpdatedAt(LocalDateTime.now(clock));

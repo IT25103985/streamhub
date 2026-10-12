@@ -167,6 +167,15 @@ public class ReportService {
             throw new IllegalArgumentException("Cannot hide or delete a user profile directly");
         }
 
+        if ("PENDING".equalsIgnoreCase(report.getStatus())) {
+            report.transitionTo(ReportStateFactory.getReviewedState());
+        }
+        report.transitionTo(ReportStateFactory.getResolvedState());
+        report.setModerator(moderator);
+        report.setModeratorAction(action);
+        report.setActionReason(request.getActionReason());
+        Report savedReport = reportRepository.saveAndFlush(report);
+
         switch (type) {
             case "VIDEO":
                 Video video = videoRepository.findById(report.getReportableId()).orElse(null);
@@ -176,10 +185,6 @@ public class ReportService {
                         video.setHidden(true);
                         video.setPrivacy("PRIVATE");
                         videoRepository.save(video);
-
-                        
-                        //video deletion branch
-                        
                     } else if ("DELETED".equals(action)) {
                         videoService.moderateDeleteVideo(video.getVideoId(), request.getActionReason(), moderator);
                     }
@@ -192,7 +197,6 @@ public class ReportService {
                     if ("HIDDEN".equals(action)) {
                         comment.setHidden(true);
                         commentRepository.save(comment);
-                        //comment deletion branch
                     } else if ("DELETED".equals(action)) {
                         socialService.moderateDeleteComment(comment.getCommentId());
                     }
@@ -205,9 +209,7 @@ public class ReportService {
                     if ("HIDDEN".equals(action)) {
                         playlist.setHidden(true);
                         playlistRepository.save(playlist);
-                        //playlist deletion branch
                     } else if ("DELETED".equals(action)) {
-                        //remove reported playlist entity
                         playlistRepository.delete(playlist);
                     }
                 }
@@ -220,12 +222,6 @@ public class ReportService {
                 break;
         }
 
-        report.transitionTo(ReportStateFactory.getResolvedState());
-        report.setModerator(moderator);
-        report.setModeratorAction(action);
-        report.setActionReason(request.getActionReason());
-
-        Report savedReport = reportRepository.save(report);
         String previewText = getPreviewText(savedReport);
 
         //notifies reporter that action was taken on their submitted report

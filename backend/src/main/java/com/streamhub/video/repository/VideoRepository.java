@@ -43,6 +43,7 @@ public interface VideoRepository extends JpaRepository<Video, UUID> {
 
     long countByOwner_UserId(UUID ownerId);
     long countByOwner_UserIdAndIsHiddenFalse(UUID ownerId);
+    List<Video> findAllByOwner_UserId(UUID ownerId);
 
     org.springframework.data.domain.Page<Video> findByOwner_UserId(UUID ownerId, Pageable pageable);
     org.springframework.data.domain.Page<Video> findByOwner_UserIdAndIsHiddenFalse(UUID ownerId, Pageable pageable);

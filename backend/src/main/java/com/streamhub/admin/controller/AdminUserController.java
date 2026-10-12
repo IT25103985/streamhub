@@ -49,4 +49,11 @@ public class AdminUserController {
         adminUserService.updateUserStatus(id, status);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{id}")
+    //permanently deletes a user account and all their files and data
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
+        adminUserService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 }

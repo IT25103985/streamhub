@@ -93,6 +93,9 @@ public class Report {
     public void transitionTo(com.streamhub.report.state.ReportState targetState) {
         if (targetState == null) return;
         com.streamhub.report.state.ReportState current = getCurrentState();
+        if (current != null && !current.canTransitionTo(targetState.getName())) {
+            throw new IllegalArgumentException("Invalid state transition from " + current.getName() + " to " + targetState.getName());
+        }
         if (current != null) {
             current.onExit(this);
         }

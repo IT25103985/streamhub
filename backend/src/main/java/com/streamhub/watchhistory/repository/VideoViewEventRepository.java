@@ -41,4 +41,8 @@ public interface VideoViewEventRepository extends JpaRepository<VideoViewEvent, 
     //counts recent watch events for a specific video in rolling window
     @Query("SELECT COUNT(e) FROM VideoViewEvent e WHERE e.video.videoId = :videoId AND e.viewedAt >= :since")
     long countRecentViewsByVideoId(@Param("videoId") UUID videoId, @Param("since") LocalDateTime since);
+
+    //counts recent watch events for a specific video and user in rolling window
+    @Query("SELECT COUNT(e) FROM VideoViewEvent e WHERE e.video.videoId = :videoId AND e.user = :user AND e.viewedAt >= :since")
+    long countRecentViewsByVideoAndUser(@Param("videoId") UUID videoId, @Param("user") com.streamhub.common.entity.User user, @Param("since") LocalDateTime since);
 }
