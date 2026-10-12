@@ -133,7 +133,7 @@ nav a.active{color:var(--text);background:var(--surface-2)}
   gap: 6px;
   padding: 5px 13px;
   font-size: 13px;
-  background: rgba(91, 95, 239, 0.1);
+  background: rgba(4, 7, 40, 0.1);
   border: 1px solid rgba(91, 95, 239, 0.3);
   color: var(--accent-light, #7377f1);
 }

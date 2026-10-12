@@ -81,7 +81,11 @@ const AdminUsersPage = () => {
 
   //toggles user account active or banned status
   const handleUpdateStatus = async (userId, newStatus) => {
-    if (!window.confirm(`Are you sure you want to change status to ${newStatus}?`)) {
+    const confirmMessage = newStatus === 'BANNED'
+      ? 'Are you sure you want to ban this user? All their uploaded videos, files, playlists, comments, and associated data will be permanently purged from the system and database.'
+      : `Are you sure you want to change status to ${newStatus}?`;
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
     try {

@@ -78,10 +78,14 @@ public class VideoController {
             @RequestParam("thumbnail") MultipartFile thumbnail,
             Principal principal) {
         
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title is required and cannot be empty");
+        }
+
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
                 
-        VideoResponseDTO uploadedVideo = videoService.uploadVideo(title, description, categoryId, file, thumbnail, user, privacy, durationSeconds);
+        VideoResponseDTO uploadedVideo = videoService.uploadVideo(title.trim(), description, categoryId, file, thumbnail, user, privacy, durationSeconds);
         return ResponseEntity.status(HttpStatus.CREATED).body(uploadedVideo);
     }
 

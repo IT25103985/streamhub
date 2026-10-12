@@ -121,6 +121,9 @@ public class VideoService {
     }
 
     public VideoResponseDTO uploadVideo(String title, String description, UUID categoryId, MultipartFile file, MultipartFile thumbnail, User owner, String privacy, Integer durationSeconds) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title is required and cannot be empty");
+        }
         uploadValidatorChain.validate(file, thumbnail);
 
         String originalFilename = file.getOriginalFilename();
@@ -540,6 +543,9 @@ public class VideoService {
             entityManager.createNativeQuery(
                     "DELETE FROM [notification] WHERE related_entity_type = 'VIDEO' AND related_entity_id = :id")
                 .setParameter("id", videoId).executeUpdate();
+            entityManager.createNativeQuery(
+                    "DELETE FROM report WHERE reportable_type = 'VIDEO' AND reportable_id = :id")
+                .setParameter("id", videoId).executeUpdate();
             entityManager.flush();
         } catch (Exception e) {
             System.err.println("Error cleaning dependent video relations: " + e.getMessage());
@@ -662,14 +668,25 @@ public class VideoService {
         }
     }
 
+    public static final int MAX_VIEWS_PER_USER_PER_DAY = 5;
+
     //records watch event and increments total view count for a video
     @Transactional
     public void incrementViewCount(UUID videoId, User user) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new com.streamhub.common.exception.ResourceNotFoundException("Video not found with id " + videoId));
 
-        // TODO(Jayalath): anti-spam validation still applies here (existing stub, unchanged) — once he caps repeat views, that cap should logically also prevent spamming VideoViewEvent rows, not just view_count.
-        //increment view counter without deduplication
+        // anti-spam cap: check if user has already reached max view count for this video in rolling 24 hour window
+        if (user != null && videoViewEventRepository != null) {
+            long recentCount = videoViewEventRepository.countRecentViewsByVideoAndUser(
+                    videoId, user, java.time.LocalDateTime.now().minusHours(24));
+            if (recentCount >= MAX_VIEWS_PER_USER_PER_DAY) {
+                // cap reached; viewer can still play the video but view_count and events do not increment
+                return;
+            }
+        }
+
+        //increment view counter
         video.setViewCount(video.getViewCount() + 1);
         videoRepository.save(video);
 

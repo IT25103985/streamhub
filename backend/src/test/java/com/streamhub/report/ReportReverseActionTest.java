@@ -88,6 +88,7 @@ public class ReportReverseActionTest {
         when(userRepository.findById(moderator.getUserId())).thenReturn(Optional.of(moderator));
         when(videoRepository.findById(video.getVideoId())).thenReturn(Optional.of(video));
         when(reportRepository.save(any(Report.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reportRepository.saveAndFlush(any(Report.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         //take hide action
         ReportActionRequest actionReq = new ReportActionRequest();
@@ -129,6 +130,7 @@ public class ReportReverseActionTest {
         when(userRepository.findById(moderator.getUserId())).thenReturn(Optional.of(moderator));
         when(commentRepository.findById(comment.getCommentId())).thenReturn(Optional.of(comment));
         when(reportRepository.save(any(Report.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reportRepository.saveAndFlush(any(Report.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Take hide action on comment
         ReportActionRequest actionReq = new ReportActionRequest();

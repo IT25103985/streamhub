@@ -12,7 +12,9 @@ public class ReviewedState implements ReportState {
 
     @Override
     public boolean canTransitionTo(String targetStatus) {
-        return targetStatus != null;
+        if (targetStatus == null) return false;
+        String s = targetStatus.trim().toUpperCase();
+        return "RESOLVED".equals(s) || "DISMISSED".equals(s) || "REJECTED".equals(s) || "PENDING".equals(s);
     }
 
     @Override

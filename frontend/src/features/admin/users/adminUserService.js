@@ -15,6 +15,11 @@ const adminUserService = {
     updateUserStatus: async (userId, status) => {
         const response = await axiosInstance.patch(`/admin/users/${userId}/status`, { status });
         return response.data;
+    },
+
+    deleteUser: async (userId) => {
+        const response = await axiosInstance.delete(`/admin/users/${userId}`);
+        return response.data;
     }
 };
 

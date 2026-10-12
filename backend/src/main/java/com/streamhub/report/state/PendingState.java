@@ -12,7 +12,9 @@ public class PendingState implements ReportState {
 
     @Override
     public boolean canTransitionTo(String targetStatus) {
-        return targetStatus != null;
+        if (targetStatus == null) return false;
+        String s = targetStatus.trim().toUpperCase();
+        return "REVIEWED".equals(s) || "UNDER_REVIEW".equals(s) || "IN_PROGRESS".equals(s) || "IN_REVIEW".equals(s) || "DISMISSED".equals(s);
     }
 
     @Override

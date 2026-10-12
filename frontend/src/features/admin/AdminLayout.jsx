@@ -19,11 +19,6 @@ const AdminNavbar = ({ user, logout }) => {
         <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, padding: '2px 8px', background: 'rgba(229, 9, 20, 0.15)', color: '#e50914', borderRadius: '4px', border: '1px solid rgba(229, 9, 20, 0.3)' }}>Admin</span>
       </div>
       <div className="header-actions" style={{ flex: 1, justifyContent: 'flex-end', display: 'flex', gap: '20px' }}>
-        <label className="search-pill">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="text" placeholder="Search admin panel…" aria-label="Search admin panel" />
-        </label>
-        
         <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
           <span style={{ fontSize: '14px', color: 'var(--text-dim)', fontWeight: 500 }}>
             {user?.username 

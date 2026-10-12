@@ -76,7 +76,7 @@ public class ReportController {
     }
 
     //updates moderation report status to under review or dismissed
-    @PatchMapping("/{id}/status")
+    @RequestMapping(value = {"/{id}/status", "/{id}"}, method = {RequestMethod.PATCH, RequestMethod.PUT})
     @PreAuthorize("hasRole('ADMINISTRATOR') or hasRole('CONTENT_MODERATOR')")
     public ResponseEntity<ReportResponse> updateStatus(@PathVariable UUID id, @Valid @RequestBody ReportStatusRequest request) {
         return ResponseEntity.ok(reportService.updateReportStatus(id, request.getStatus()));
